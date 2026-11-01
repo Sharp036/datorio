@@ -269,7 +269,8 @@ class ExportService(
             data.columns.forEachIndexed { colIdx, col ->
                 val cell = excelRow.createCell(colIdx)
                 val value = row[col]
-                // Values arrive as text from the drivers; a number keeps its type in the sheet
+                // Values arrive as text from the drivers; an amount becomes a number, while a code with
+                // leading zeros or a long identifier (a phone, an id) stays text as before
                 val number = (value as? String)?.takeIf { NUMBER.matches(it) }?.toDoubleOrNull()
                 when {
                     value == null -> cell.setBlank()
@@ -306,6 +307,6 @@ class ExportService(
     }
 
     companion object {
-        private val NUMBER = Regex("-?\\d{1,15}(\\.\\d+)?")
+        private val NUMBER = Regex("-?(0|[1-9]\\d{0,9})(\\.\\d+)?")
     }
 }

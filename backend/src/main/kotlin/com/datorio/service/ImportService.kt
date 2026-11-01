@@ -812,6 +812,8 @@ class ImportService(
                     conn.createStatement().use { it.execute(truncateSql) }
                 }
 
+                // PostgreSQL rejects a VARCHAR NULL for a numeric or date column; the ClickHouse driver keeps the old binding
+                val nullType = if (ds.type.name == "CLICKHOUSE") java.sql.Types.VARCHAR else java.sql.Types.NULL
                 conn.prepareStatement(insertSql).use { ps ->
                     var imported = 0
                     var failed = 0
@@ -826,8 +828,10 @@ class ImportService(
                             ps.executeBatch()
                         } catch (e: java.sql.SQLException) {
                             val cause = e.nextException ?: e
+                            // ClickHouse has no transaction: the rows of the earlier batches stay in the table
+                            val written = if (ds.type.name == "CLICKHOUSE" && imported > 0) "; the $imported row(s) before them were written" else ""
                             throw IllegalStateException(
-                                "Rows $firstPendingRow-${firstPendingRow + pending - 1} were rejected by the database: ${cause.message}", e)
+                                "Rows $firstPendingRow-${firstPendingRow + pending - 1} were rejected by the database: ${cause.message}$written", e)
                         }
                         imported += pending
                         pending = 0
@@ -837,7 +841,7 @@ class ImportService(
                             mappings.forEachIndexed { i, m ->
                                 // Const-value mappings are stored under targetColumn in the row map.
                                 val raw = row[if (!m.constValue.isNullOrEmpty()) m.targetColumn else m.sourceColumn ?: m.targetColumn]
-                                setParam(ps, i + 1, raw, m)
+                                setParam(ps, i + 1, raw, m, nullType)
                             }
                             ps.addBatch()
                             if (pending == 0) firstPendingRow = rowIdx + 1
@@ -881,10 +885,9 @@ class ImportService(
             "$base ON CONFLICT ($conflictTarget) DO NOTHING"
     }
 
-    private fun setParam(ps: java.sql.PreparedStatement, idx: Int, raw: String?, mapping: ImportSourceMapping) {
+    private fun setParam(ps: java.sql.PreparedStatement, idx: Int, raw: String?, mapping: ImportSourceMapping, nullType: Int) {
         if (raw == null || raw.isBlank()) {
-            // Types.NULL leaves the type to the column; a VARCHAR NULL is rejected by PostgreSQL for numeric and date columns
-            ps.setNull(idx, java.sql.Types.NULL)
+            ps.setNull(idx, nullType)
             return
         }
         when (mapping.dataType) {

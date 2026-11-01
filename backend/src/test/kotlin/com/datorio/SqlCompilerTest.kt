@@ -339,15 +339,21 @@ class SqlCompilerTest {
             val regions = listOf("North", "South")
             assertEquals("WHERE r IN ('North', 'South')", resolver.resolve("WHERE r IN :r", mapOf("r" to regions)))
             assertEquals("WHERE r IN ('North', 'South')", resolver.resolve("WHERE r IN (:r)", mapOf("r" to regions)))
-            assertEquals("WHERE 1=1", resolver.resolve("WHERE r IN (:r)", mapOf("r" to emptyList<String>())))
+            assertEquals("WHERE has(['North', 'South'], r)", resolver.resolve("WHERE has([:r], r)", mapOf("r" to regions)))
+            assertEquals("WHERE r IN ('')", resolver.resolve("WHERE r IN (:r)", mapOf("r" to emptyList<String>())))
         }
 
         @Test
-        fun `a missing value removes the first condition and a qualified one`() {
-            assertEquals("SELECT * FROM t WHERE 1=1 AND x = 1",
-                resolver.resolve("SELECT * FROM t WHERE t.d >= :from AND x = 1", emptyMap()))
-            assertEquals("SELECT * FROM t WHERE x = 1 AND 1=1",
-                resolver.resolve("SELECT * FROM t WHERE x = 1 AND \"d\" <= :to", mapOf("to" to "")))
+        fun `a multi-select string stays one literal for splitByChar`() {
+            assertEquals("WHERE has(splitByChar(',', 'North,South'), r)",
+                resolver.resolve("WHERE has(splitByChar(',', :r), r)", mapOf("r" to "North,South")))
+        }
+
+        @Test
+        fun `a missing value removes only an AND condition, other placeholders match nothing`() {
+            // Hidden drill-down widgets rely on "WHERE col = :p" giving no rows until the click sets :p
+            assertEquals("SELECT * FROM t WHERE g = '' AND r.b = '' AND 1=1",
+                resolver.resolve("SELECT * FROM t WHERE g = :g AND r.b = :b AND c = :c", emptyMap()))
         }
 
         @Test

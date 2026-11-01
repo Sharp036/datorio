@@ -13,12 +13,12 @@ import org.slf4j.LoggerFactory
  * Rules:
  *  - a placeholder is ":name" outside string literals, quoted identifiers and comments;
  *    "::type" (a PostgreSQL cast) is not a placeholder;
- *  - a list value (a multi-select) becomes "('a', 'b')", or "'a', 'b'" when the placeholder
- *    already stands inside parentheses, so both "IN :p" and "IN (:p)" work; an empty list
- *    counts as a missing value;
- *  - a missing or blank value removes a simple condition "AND col op :p" (also "WHERE col op :p"
- *    and a qualified "t.col"), which becomes "1=1"; a placeholder left in a more complex
- *    expression becomes ''.
+ *  - a list value (sent by an API client; the parameter panel sends a multi-select as the
+ *    string "a,b") becomes "('a', 'b')", or "'a', 'b'" when the placeholder already stands
+ *    inside parentheses or brackets; an empty list counts as a missing value;
+ *  - a missing or blank value turns a simple condition "AND col op :p" into "AND 1=1"; any other
+ *    placeholder becomes '' (so "WHERE col = :p" matches nothing until a value is chosen, which
+ *    hidden drill-down widgets rely on).
  *
  * Security: all values are escaped through the dialect's literal formatting.
  */
@@ -113,25 +113,25 @@ class ParameterResolver(dialectType: DataSourceType) {
         return out.toString()
     }
 
-    /** True when the placeholder at [start, end) is wrapped as "( :p )" with nothing else inside. */
+    /** True when the placeholder at [start, end) is wrapped as "( :p )" or "[ :p ]" with nothing else inside. */
     private fun insideParentheses(sql: String, start: Int, end: Int): Boolean {
         var before = start - 1
         while (before >= 0 && sql[before].isWhitespace()) before--
         var after = end
         while (after < sql.length && sql[after].isWhitespace()) after++
-        return before >= 0 && sql[before] == '(' && after < sql.length && sql[after] == ')'
+        if (before < 0 || after >= sql.length) return false
+        return (sql[before] == '(' && sql[after] == ')') || (sql[before] == '[' && sql[after] == ']')
     }
 
     /**
-     * Remove a simple condition "AND column op :param" (or the first condition after WHERE)
-     * by replacing it with "1=1". The column may be qualified ("t.col") or quoted.
-     * Conditions in parentheses or other expressions are left for the '' substitution.
+     * Turn a simple condition "AND column op :param" into "AND 1=1".
+     * Conditions after WHERE, in parentheses or other expressions are left for the '' substitution.
      */
     private fun removeSimpleConditions(sql: String, paramName: String): String {
-        val column = """(?:[\w"`]+\.)*[\w"`]+"""
-        val operator = """(?:=|!=|<>|<=|>=|<|>|(?i:NOT\s+)?(?i:I?LIKE)|(?i:NOT\s+)?(?i:IN))"""
-        val regex = Regex("""(?i)\b(AND|WHERE)\s+$column\s*$operator\s*\(?\s*:${Regex.escape(paramName)}\b(?:\s*\))?""")
-        return regex.replace(sql) { m -> "${m.groupValues[1]} 1=1" }
+        return sql.replace(
+            Regex("""(?i)\bAND\s+\w+\s*[=!<>]+\s*:${Regex.escape(paramName)}\b"""),
+            "AND 1=1"
+        )
     }
 
     private fun formatParameterValue(value: Any?, inParentheses: Boolean = false): String {
