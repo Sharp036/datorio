@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
+import Logo from '@/components/common/Logo'
 import { LogIn, Eye, EyeOff } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { SUPPORTED_LANGUAGES } from '@/i18n'
@@ -35,9 +36,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-brand-600 flex items-center justify-center mb-3">
-            <span className="text-white font-bold text-xl">DTR</span>
-          </div>
+          <Logo className="w-14 h-14 mb-3" />
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Datorio</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t('auth.sign_in_subtitle')}</p>
         </div>

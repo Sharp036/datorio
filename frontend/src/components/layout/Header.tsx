@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { SUPPORTED_LANGUAGES } from '@/i18n'
 import { authApi } from '@/api/auth'
 import GlobalSearchBar from '@/components/search/GlobalSearchBar'
+import Logo from '@/components/common/Logo'
 import clsx from 'clsx'
 
 export default function Header() {
@@ -128,9 +129,7 @@ export default function Header() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setAboutOpen(false)}>
           <div className="bg-white dark:bg-dark-surface-50 rounded-xl shadow-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-lg bg-brand-600 flex items-center justify-center">
-                <span className="text-white font-bold text-sm">DTR</span>
-              </div>
+              <Logo className="w-10 h-10 flex-shrink-0" />
               <div>
                 <h3 className="text-lg font-semibold text-slate-800 dark:text-white">Datorio BI Platform</h3>
                 <p className="text-xs text-slate-400">{t('header.about_version', { version: '1.0' })}</p>

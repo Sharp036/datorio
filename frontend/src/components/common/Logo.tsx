@@ -1,0 +1,15 @@
+interface Props {
+  className?: string
+}
+
+// Datorio mark: a white D with two bars on the brand blue; the same drawing as public/favicon.svg.
+export default function Logo({ className }: Props) {
+  return (
+    <svg viewBox="0 0 64 64" className={className} aria-hidden="true">
+      <rect width="64" height="64" rx="14" fill="#2563eb" />
+      <path fill="#fff" fillRule="evenodd" d="M14 12 H31 A20 20 0 0 1 31 52 H14 Z M22 20 H31 A12 12 0 0 1 31 44 H22 Z" />
+      <rect x="25" y="33" width="4.5" height="8" rx="1" fill="#bfdbfe" />
+      <rect x="31.5" y="27" width="4.5" height="14" rx="1" fill="#bfdbfe" />
+    </svg>
+  )
+}
