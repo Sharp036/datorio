@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import clsx from 'clsx'
 import { useAuthStore } from '@/store/authStore'
+import Logo from '@/components/common/Logo'
 
 const navItems = [
   { to: '/', icon: Home, i18nKey: 'nav.home' },
@@ -54,9 +55,7 @@ export default function Sidebar() {
     )}>
       {/* Logo */}
       <div className="flex items-center h-14 px-4 border-b border-surface-200 dark:border-dark-surface-100">
-        <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center flex-shrink-0">
-          <span className="text-white font-bold text-sm">DTR</span>
-        </div>
+        <Logo className="w-8 h-8 flex-shrink-0" />
         {!collapsed && <span className="ml-3 font-semibold text-slate-800 dark:text-slate-100">Datorio</span>}
       </div>
 

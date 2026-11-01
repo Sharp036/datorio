@@ -1,10 +1,10 @@
-# Datorio
+# <img src="docs/images/logo.svg" alt="" width="40" height="40" align="top"> Datorio
 
 **Self-hosted, open-source BI for PostgreSQL and ClickHouse.** Build reports and dashboards in a visual designer, start Apache Airflow DAGs from a button on a report, and load Excel, CSV, JSON and ZIP files into your database. Everything runs in one Docker container.
 
-[![CI](https://github.com/Sharp036/bi-platform/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Sharp036/bi-platform/actions/workflows/ci.yml)
+[![CI](https://github.com/datorio-bi/datorio/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/datorio-bi/datorio/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Docker image](https://img.shields.io/badge/docker-ghcr.io%2Fsharp036%2Fbi--platform-2496ED?logo=docker&logoColor=white)](https://github.com/Sharp036/bi-platform/pkgs/container/bi-platform)
+[![Docker image](https://img.shields.io/badge/docker-ghcr.io%2Fdatorio--bi%2Fdatorio-2496ED?logo=docker&logoColor=white)](https://github.com/datorio-bi/datorio/pkgs/container/datorio)
 
 ## Highlights
 
@@ -53,8 +53,8 @@ An import source describes how a file lands in a PostgreSQL or ClickHouse table:
 Requirements: Docker with Docker Compose.
 
 ```bash
-git clone https://github.com/Sharp036/bi-platform.git
-cd bi-platform
+git clone https://github.com/datorio-bi/datorio.git
+cd datorio
 cp .env.example .env      # set ADMIN_PASSWORD and JWT_SECRET
 docker compose up -d
 ```
@@ -65,7 +65,7 @@ The stack also starts PostgreSQL for the application metadata and a ClickHouse s
 
 The API documentation is at http://localhost:8080/api/docs/swagger.
 
-A ready image of the `main` branch is published as `ghcr.io/sharp036/bi-platform:latest`.
+A ready image of the `main` branch is published as `ghcr.io/datorio-bi/datorio:latest`.
 
 ## Connect Apache Airflow
 
@@ -144,7 +144,7 @@ npm run dev
 
 ## Contributing
 
-Bug reports, ideas and pull requests are welcome: open an [issue](https://github.com/Sharp036/bi-platform/issues) or a pull request.
+Bug reports, ideas and pull requests are welcome: open an [issue](https://github.com/datorio-bi/datorio/issues) or a pull request.
 
 ## License
 
