@@ -1,0 +1,84 @@
+{
+  "name": "Sample sales from Excel",
+  "description": "Appends the orders of examples/sales_2026_01.xlsx to sample.sales",
+  "datasourceId": 0,
+  "sourceFormat": "xlsx",
+  "sheetName": "Sales",
+  "headerRow": 1,
+  "skipRows": 0,
+  "targetSchema": "sample",
+  "targetTable": "sales",
+  "loadMode": "append",
+  "keyColumns": [],
+  "filenamePattern": "",
+  "strictColumns": true,
+  "forbiddenColumns": [],
+  "fileEncoding": "UTF-8",
+  "jsonArrayPath": "",
+  "mappings": [
+    {
+      "sourceColumn": "Date",
+      "targetColumn": "sale_date",
+      "dataType": "date",
+      "nullable": false,
+      "dateFormat": "yyyy-MM-dd",
+      "constValue": ""
+    },
+    {
+      "sourceColumn": "Order ID",
+      "targetColumn": "order_id",
+      "dataType": "integer",
+      "nullable": false,
+      "dateFormat": null,
+      "constValue": ""
+    },
+    {
+      "sourceColumn": "Product",
+      "targetColumn": "product_name",
+      "dataType": "string",
+      "nullable": false,
+      "dateFormat": null,
+      "constValue": ""
+    },
+    {
+      "sourceColumn": "Category",
+      "targetColumn": "category",
+      "dataType": "string",
+      "nullable": false,
+      "dateFormat": null,
+      "constValue": ""
+    },
+    {
+      "sourceColumn": "Region",
+      "targetColumn": "region",
+      "dataType": "string",
+      "nullable": false,
+      "dateFormat": null,
+      "constValue": ""
+    },
+    {
+      "sourceColumn": "Qty",
+      "targetColumn": "quantity",
+      "dataType": "integer",
+      "nullable": false,
+      "dateFormat": null,
+      "constValue": ""
+    },
+    {
+      "sourceColumn": "Unit price",
+      "targetColumn": "unit_price",
+      "dataType": "float",
+      "nullable": false,
+      "dateFormat": null,
+      "constValue": ""
+    },
+    {
+      "sourceColumn": "Total",
+      "targetColumn": "total_amount",
+      "dataType": "float",
+      "nullable": false,
+      "dateFormat": null,
+      "constValue": ""
+    }
+  ]
+}

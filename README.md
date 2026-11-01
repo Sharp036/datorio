@@ -61,7 +61,9 @@ docker compose up -d
 
 Open http://localhost:8080 and sign in with `ADMIN_USER` / `ADMIN_PASSWORD` from `.env` (`admin` / `admin` by default).
 
-The stack also starts PostgreSQL for the application metadata and a ClickHouse server with sample tables (`sample.sales`, `sample.page_views`). To try the designer on them, add a ClickHouse data source with host `clickhouse`, port `8123`, user `default` and the password from `CH_PASSWORD`.
+The stack also starts PostgreSQL for the application metadata and a ClickHouse server with two years (2024-2025) of generated sample data: orders in `sample.sales` and website visits in `sample.page_views`. To try the designer on them, add a ClickHouse data source with host `clickhouse`, port `8123`, user `default` and the password from `CH_PASSWORD`.
+
+To try a file import, open **Data Import**, press **Load from JSON**, choose [`examples/sales-import-source.json`](examples/sales-import-source.json), select the ClickHouse data source and save. Then upload [`examples/sales_2026_01.xlsx`](examples/sales_2026_01.xlsx) with this source on the **Upload** tab: it adds the January 2026 orders to `sample.sales`.
 
 The API documentation is at http://localhost:8080/api/docs/swagger.
 
