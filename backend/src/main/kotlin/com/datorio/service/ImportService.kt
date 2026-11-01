@@ -8,6 +8,10 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import org.apache.commons.csv.CSVFormat
 import org.apache.poi.ss.usermodel.CellType
 import org.apache.poi.ss.usermodel.DateUtil
+import org.apache.poi.ss.usermodel.FormulaError
+import org.apache.poi.ss.usermodel.FormulaEvaluator
+import org.apache.poi.ss.util.NumberToTextConverter
+import org.apache.poi.xssf.usermodel.XSSFCell
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.PageRequest
@@ -39,7 +43,7 @@ class ImportService(
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
     private val jsonMapper = ObjectMapper()
-    private val dataFormatter = org.apache.poi.ss.usermodel.DataFormatter()
+    private val zeroPaddedFormat = Regex("0+")  // number format of codes such as "00000"
 
     // ── Source CRUD ───────────────────────────────────────────────────────────
 
@@ -441,6 +445,7 @@ class ImportService(
 
     private fun parseXlsx(stream: InputStream, source: ImportSource, maxRows: Int): List<Map<String, String?>> {
         val workbook = XSSFWorkbook(stream)
+        val evaluator = workbook.creationHelper.createFormulaEvaluator()
         val sheet = if (source.sheetName != null)
             workbook.getSheet(source.sheetName) ?: workbook.getSheetAt(0)
         else
@@ -455,7 +460,7 @@ class ImportService(
         for (rIdx in 0 until headerRowIdx) {
             val row = sheet.getRow(rIdx) ?: continue
             for (cIdx in 0 until row.lastCellNum) {
-                val value = cellToString(row.getCell(cIdx))?.takeIf { it.isNotEmpty() } ?: continue
+                val value = cellToString(row.getCell(cIdx), evaluator)?.takeIf { it.isNotEmpty() } ?: continue
                 preHeaderContext["${columnIndexToLetter(cIdx)}${rIdx + 1}"] = value
             }
         }
@@ -478,7 +483,7 @@ class ImportService(
             headers.forEachIndexed { i, header ->
                 if (header.isNotEmpty()) {
                     val cell = row.getCell(i)
-                    map[header] = cellToString(cell)
+                    map[header] = cellToString(cell, evaluator)
                 }
             }
             result.add(map)
@@ -497,22 +502,29 @@ class ImportService(
         return sb.toString()
     }
 
-    private fun cellToString(cell: org.apache.poi.ss.usermodel.Cell?): String? {
+    // The value of a cell, not its display text: the display depends on the number format and the
+    // server locale ("1,234.56", "1 234,56"), and shows a formula instead of its result.
+    private fun cellToString(cell: org.apache.poi.ss.usermodel.Cell?, evaluator: FormulaEvaluator): String? {
         if (cell == null) return null
-        return when (cell.cellType) {
+        if (cell.cellType == CellType.FORMULA && (cell as? XSSFCell)?.ctCell?.isSetV == false) {
+            // Saved without calculated results (some libraries do so): calculate here
+            try { evaluator.evaluateFormulaCell(cell) } catch (_: Exception) { return "=${cell.cellFormula}" }
+        }
+        val type = if (cell.cellType == CellType.FORMULA) cell.cachedFormulaResultType else cell.cellType
+        return when (type) {
             CellType.BLANK -> null
             CellType.BOOLEAN -> cell.booleanCellValue.toString()
             CellType.NUMERIC -> {
-                if (DateUtil.isCellDateFormatted(cell)) {
-                    cell.localDateTimeCellValue.toLocalDate().toString()
-                } else {
-                    dataFormatter.formatCellValue(cell).trim().ifEmpty { null }
+                val value = cell.numericCellValue
+                val format = cell.cellStyle.dataFormatString.orEmpty()
+                when {
+                    DateUtil.isCellDateFormatted(cell) -> cell.localDateTimeCellValue.toLocalDate().toString()
+                    zeroPaddedFormat.matches(format) && value >= 0 && value % 1 == 0.0 ->
+                        value.toLong().toString().padStart(format.length, '0')
+                    else -> NumberToTextConverter.toText(value)
                 }
             }
-            CellType.FORMULA -> {
-                try { dataFormatter.formatCellValue(cell).trim().ifEmpty { null } }
-                catch (_: Exception) { cell.stringCellValue?.trim()?.ifEmpty { null } }
-            }
+            CellType.ERROR -> FormulaError.forInt(cell.errorCellValue).string
             else -> cell.stringCellValue?.trim()?.ifEmpty { null }
         }
     }
