@@ -1,5 +1,3 @@
-version: '3.9'
-
 # ══════════════════════════════════════════════════
 #  Datorio — Docker Compose
 # ══════════════════════════════════════════════════
@@ -49,6 +47,12 @@ services:
       SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
       EMBED_BASE_URL: ${EMBED_BASE_URL:-}
       EXPORT_DIRECTORY: ${EXPORT_DIRECTORY:-/tmp/datorio-exports}
+      REGISTRATION_ENABLED: ${REGISTRATION_ENABLED:-false}
+      DATASOURCE_ENCRYPTION_KEY: ${DATASOURCE_ENCRYPTION_KEY:-}
+      QUERY_TIMEOUT_SECONDS: ${QUERY_TIMEOUT_SECONDS:-120}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - export_data:/tmp/datorio-exports   # saved exports survive a container recreation
     depends_on:
       postgres:
         condition: service_healthy
@@ -103,6 +107,7 @@ services:
 volumes:
   pg_data:
   ch_data:
+  export_data:
 
 networks:
   datorio-net:

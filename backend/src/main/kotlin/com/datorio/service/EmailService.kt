@@ -119,10 +119,33 @@ class EmailService(
         }
     }
 
+    /** A text message without an attachment, for alerts; false when email is off or the send fails. */
+    fun sendPlainEmail(recipients: List<String>, subject: String, text: String): Boolean {
+        if (!emailEnabled || recipients.isEmpty()) return false
+        return try {
+            val session = createMailSession()
+            val message = MimeMessage(session).apply {
+                setFrom(InternetAddress(fromAddress, "Datorio"))
+                setRecipients(Message.RecipientType.TO, recipients.map { InternetAddress(it) }.toTypedArray())
+                setSubject(subject, "UTF-8")
+                setText(text, "UTF-8")
+            }
+            Transport.send(message)
+            true
+        } catch (e: Exception) {
+            log.error("Failed to send email '{}': {}", subject, e.message)
+            false
+        }
+    }
+
     private fun createMailSession(): Session {
         val props = Properties().apply {
             put("mail.smtp.host", smtpHost)
             put("mail.smtp.port", smtpPort.toString())
+            // A server that does not answer must not hold the request thread
+            put("mail.smtp.connectiontimeout", "15000")
+            put("mail.smtp.timeout", "30000")
+            put("mail.smtp.writetimeout", "30000")
             put("mail.smtp.auth", (smtpUsername.isNotBlank()).toString())
             if (useTls) {
                 put("mail.smtp.starttls.enable", "true")

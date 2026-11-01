@@ -1136,5 +1136,16 @@
   "designer.row_color_add_value": "Add value...",
   "designer.row_color_apply_to": "Apply to",
   "designer.row_color_mode_row": "Whole row",
-  "designer.row_color_mode_cell": "Only the cell"
+  "designer.row_color_mode_cell": "Only the cell",
+  "common.error": "Something went wrong",
+  "common.copied": "Copied",
+  "common.saved": "Saved",
+  "common.retry": "Try again",
+  "common.render_error": "This part could not be displayed",
+  "designer.save_first": "Save the report first",
+  "scripts.run_to_see_output": "Run the script to see its output",
+  "params.all_option": "-- all --",
+  "charts.drag_to_move": "drag to move",
+  "table.truncated": "(first rows only)",
+  "table.truncated_hint": "The query returned more rows than the widget shows; narrow the filter or add a LIMIT"
 }

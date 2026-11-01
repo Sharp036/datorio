@@ -538,8 +538,10 @@ class ImportService(
         fixedDelimiter: Char?,
     ): List<Map<String, String?>> {
         val charset = runCatching { Charset.forName(source.fileEncoding) }.getOrDefault(Charsets.UTF_8)
-        val allLines = stream.bufferedReader(charset).readLines()
+        val allLines = stream.bufferedReader(charset).readLines().toMutableList()
         if (allLines.isEmpty()) return emptyList()
+        // Excel writes "CSV UTF-8" with a byte order mark, which would become part of the first header
+        allLines[0] = allLines[0].removePrefix("\uFEFF")
 
         val headerLineIdx = source.headerRow - 1
         if (headerLineIdx >= allLines.size) throw IllegalArgumentException("Header row ${source.headerRow} not found")
@@ -813,6 +815,23 @@ class ImportService(
                 conn.prepareStatement(insertSql).use { ps ->
                     var imported = 0
                     var failed = 0
+                    var pending = 0
+                    var firstPendingRow = 1
+                    // A batch that the database rejects (a constraint, a type, an upsert without a unique index)
+                    // ends the load with the database message: PostgreSQL would reject every later batch of the
+                    // transaction anyway, and ClickHouse has no transaction to roll back
+                    fun flush() {
+                        if (pending == 0) return
+                        try {
+                            ps.executeBatch()
+                        } catch (e: java.sql.SQLException) {
+                            val cause = e.nextException ?: e
+                            throw IllegalStateException(
+                                "Rows $firstPendingRow-${firstPendingRow + pending - 1} were rejected by the database: ${cause.message}", e)
+                        }
+                        imported += pending
+                        pending = 0
+                    }
                     rows.forEachIndexed { rowIdx, row ->
                         try {
                             mappings.forEachIndexed { i, m ->
@@ -821,22 +840,18 @@ class ImportService(
                                 setParam(ps, i + 1, raw, m)
                             }
                             ps.addBatch()
-                            if ((rowIdx + 1) % BATCH_SIZE == 0) {
-                                ps.executeBatch()
-                                imported += BATCH_SIZE
-                            }
+                            if (pending == 0) firstPendingRow = rowIdx + 1
+                            pending++
                         } catch (e: Exception) {
+                            ps.clearParameters()
                             log.warn("Row ${rowIdx + 1} failed: ${e.message}")
                             failed++
                         }
+                        if (pending == BATCH_SIZE) flush()
                     }
-                    val remaining = rows.size % BATCH_SIZE
-                    if (remaining > 0) {
-                        ps.executeBatch()
-                        imported += remaining
-                    }
+                    flush()
                     conn.commit()
-                    return Pair(imported - failed, failed)
+                    return Pair(imported, failed)
                 }
             } catch (e: Exception) {
                 conn.rollback()
@@ -868,7 +883,8 @@ class ImportService(
 
     private fun setParam(ps: java.sql.PreparedStatement, idx: Int, raw: String?, mapping: ImportSourceMapping) {
         if (raw == null || raw.isBlank()) {
-            ps.setNull(idx, java.sql.Types.VARCHAR)
+            // Types.NULL leaves the type to the column; a VARCHAR NULL is rejected by PostgreSQL for numeric and date columns
+            ps.setNull(idx, java.sql.Types.NULL)
             return
         }
         when (mapping.dataType) {

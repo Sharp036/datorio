@@ -9,6 +9,7 @@ import org.springframework.security.core.Authentication
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.web.bind.annotation.*
+import org.springframework.security.access.prepost.PreAuthorize
 
 @RestController
 @RequestMapping("/templates")
@@ -22,6 +23,7 @@ class TemplateController(
 
     // ─── Gallery ───
 
+    @PreAuthorize("hasAuthority('REPORT_VIEW')")
     @GetMapping
     fun list(
         @RequestParam(required = false) category: String?,
@@ -30,10 +32,12 @@ class TemplateController(
     ): ResponseEntity<List<TemplateListItem>> =
         ResponseEntity.ok(templateService.listTemplates(category, PageRequest.of(page, size)))
 
+    @PreAuthorize("hasAuthority('REPORT_VIEW')")
     @GetMapping("/categories")
     fun categories(): ResponseEntity<List<String>> =
         ResponseEntity.ok(templateService.getCategories())
 
+    @PreAuthorize("hasAuthority('REPORT_EDIT')")
     @PutMapping("/{id}/meta")
     fun updateMeta(
         @PathVariable id: Long,
@@ -43,6 +47,7 @@ class TemplateController(
         return ResponseEntity.ok().build()
     }
 
+    @PreAuthorize("hasAuthority('REPORT_EDIT')")
     @PostMapping("/{reportId}/mark")
     fun markAsTemplate(
         @PathVariable reportId: Long,
@@ -51,6 +56,7 @@ class TemplateController(
     ): ResponseEntity<TemplateListItem> =
         ResponseEntity.ok(templateService.markAsTemplate(reportId, category, preview))
 
+    @PreAuthorize("hasAuthority('REPORT_EDIT')")
     @PostMapping("/{reportId}/unmark")
     fun unmarkAsTemplate(@PathVariable reportId: Long): ResponseEntity<Void> {
         templateService.unmarkAsTemplate(reportId)
@@ -59,10 +65,12 @@ class TemplateController(
 
     // ─── JSON Export / Import ───
 
+    @PreAuthorize("hasAuthority('REPORT_VIEW')")
     @GetMapping("/export/{reportId}")
     fun exportReport(@PathVariable reportId: Long): ResponseEntity<ReportExportConfig> =
         ResponseEntity.ok(templateService.exportReport(reportId))
 
+    @PreAuthorize("hasAuthority('REPORT_EDIT')")
     @PostMapping("/import")
     fun importReport(
         @RequestBody request: ImportReportRequest,

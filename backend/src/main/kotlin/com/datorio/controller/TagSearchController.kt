@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.web.bind.annotation.*
+import org.springframework.security.access.prepost.PreAuthorize
 
 // ═══════════════════════════════════════════
 //  Tags
@@ -24,14 +25,17 @@ class TagController(
         userRepository.findByUsername(user.username)
             .orElseThrow { NoSuchElementException("User not found") }.id
 
+    @PreAuthorize("hasAuthority('REPORT_VIEW')")
     @GetMapping
     fun list(): ResponseEntity<List<TagDto>> =
         ResponseEntity.ok(tagService.listTags())
 
+    @PreAuthorize("hasAuthority('REPORT_VIEW')")
     @GetMapping("/search")
     fun search(@RequestParam q: String): ResponseEntity<List<TagDto>> =
         ResponseEntity.ok(tagService.searchTags(q))
 
+    @PreAuthorize("hasAuthority('REPORT_EDIT')")
     @PostMapping
     fun create(
         @Valid @RequestBody request: TagCreateRequest,
@@ -39,6 +43,7 @@ class TagController(
     ): ResponseEntity<TagDto> =
         ResponseEntity.ok(tagService.createTag(request.name, request.color, getUserId(user)))
 
+    @PreAuthorize("hasAuthority('REPORT_EDIT')")
     @PutMapping("/{id}")
     fun update(
         @PathVariable id: Long,
@@ -46,6 +51,7 @@ class TagController(
     ): ResponseEntity<TagDto> =
         ResponseEntity.ok(tagService.updateTag(id, request))
 
+    @PreAuthorize("hasAuthority('REPORT_EDIT')")
     @DeleteMapping("/{id}")
     fun delete(@PathVariable id: Long): ResponseEntity<Void> {
         tagService.deleteTag(id)
@@ -53,6 +59,7 @@ class TagController(
     }
 
     /** Get tags for an object */
+    @PreAuthorize("hasAuthority('REPORT_VIEW')")
     @GetMapping("/object/{objectType}/{objectId}")
     fun objectTags(
         @PathVariable objectType: String,
@@ -61,6 +68,7 @@ class TagController(
         ResponseEntity.ok(tagService.getObjectTags(objectType.uppercase(), objectId))
 
     /** Assign a tag to an object */
+    @PreAuthorize("hasAuthority('REPORT_EDIT')")
     @PostMapping("/assign")
     fun assign(
         @Valid @RequestBody request: TagAssignRequest,
@@ -69,6 +77,7 @@ class TagController(
         ResponseEntity.ok(tagService.assignTag(request.tagId, request.objectType, request.objectId, getUserId(user)))
 
     /** Set all tags for an object (replace) */
+    @PreAuthorize("hasAuthority('REPORT_EDIT')")
     @PostMapping("/bulk")
     fun bulkSet(
         @Valid @RequestBody request: BulkTagRequest,
@@ -77,6 +86,7 @@ class TagController(
         ResponseEntity.ok(tagService.setObjectTags(request.tagIds, request.objectType, request.objectId, getUserId(user)))
 
     /** Remove a tag from an object */
+    @PreAuthorize("hasAuthority('REPORT_EDIT')")
     @DeleteMapping("/object/{objectType}/{objectId}/{tagId}")
     fun removeTag(
         @PathVariable objectType: String,
@@ -98,6 +108,7 @@ class SearchController(
     private val searchService: GlobalSearchService
 ) {
 
+    @PreAuthorize("hasAuthority('REPORT_VIEW')")
     @GetMapping
     fun search(
         @RequestParam q: String,

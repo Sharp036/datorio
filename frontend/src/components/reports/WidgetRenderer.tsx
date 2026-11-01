@@ -1,6 +1,7 @@
 import type { RenderedWidget, ChartLayerItem, WidgetData } from '@/types'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { parseJson } from '@/utils/safeJson'
 import MultiLayerChart from '@/components/charts/MultiLayerChart'
 import TableWidget from '@/components/charts/TableWidget'
 import KpiCard from '@/components/charts/KpiCard'
@@ -52,7 +53,7 @@ function formatTitleValue(value: unknown, format?: string): string {
     case 'percent1': return hasNum ? `${(num * 100).toFixed(1)}%` : String(value)
     case 'percent0': return hasNum ? `${Math.round(num * 100)}%` : String(value)
     case 'thousands':return hasNum ? `${(num / 1000).toFixed(1)}K` : String(value)
-    case 'millions': return hasNum ? `${(num / 1_000_000).toFixed(2)} млн` : String(value)
+    case 'millions': return hasNum ? `${(num / 1_000_000).toFixed(2)}M` : String(value)
     default:         return hasNum ? num.toLocaleString() : String(value)
   }
 }
@@ -98,7 +99,7 @@ export default function WidgetRenderer({
   }
 
   if (widget.widgetType === 'BUTTON') {
-    const btnConfig: ButtonConfig = widget.chartConfig ? JSON.parse(widget.chartConfig) : {}
+    const btnConfig = parseJson<ButtonConfig>(widget.chartConfig, {} as ButtonConfig)
     return (
       <ButtonWidget
         config={btnConfig}
@@ -114,17 +115,17 @@ export default function WidgetRenderer({
   }
 
   if (widget.widgetType === 'WEBPAGE') {
-    const config = widget.chartConfig ? JSON.parse(widget.chartConfig) : {}
+    const config = parseJson<Record<string, any>>(widget.chartConfig, {})
     return <WebPageWidget url={config.url || ''} title={resolvedTitle} />
   }
 
   if (widget.widgetType === 'SPACER') {
-    const config = widget.chartConfig ? JSON.parse(widget.chartConfig) : {}
+    const config = parseJson<Record<string, any>>(widget.chartConfig, {})
     return <SpacerWidget height={config.height} color={config.color} />
   }
 
   if (widget.widgetType === 'DIVIDER') {
-    const config = widget.chartConfig ? JSON.parse(widget.chartConfig) : {}
+    const config = parseJson<Record<string, any>>(widget.chartConfig, {})
     return <DividerWidget
       orientation={config.orientation}
       color={config.color}
@@ -141,8 +142,8 @@ export default function WidgetRenderer({
   // Fallback chain handles widgets saved before V28 migration:
   //   widget.body (V28+) > chartConfig.content (interim fix) > widget.title (legacy)
   if (widget.widgetType === 'TEXT') {
-    const styleConfig = widget.style ? JSON.parse(widget.style) : {}
-    const cfg = widget.chartConfig ? JSON.parse(widget.chartConfig) : {}
+    const styleConfig = parseJson<Record<string, any>>(widget.style, {})
+    const cfg = parseJson<Record<string, any>>(widget.chartConfig, {})
     const body = widget.body
       ?? (typeof cfg.content === 'string' ? cfg.content : undefined)
       ?? widget.title
@@ -152,7 +153,7 @@ export default function WidgetRenderer({
 
   if (!widget.data) {
     if (widget.widgetType === 'IMAGE') {
-      const config = widget.chartConfig ? JSON.parse(widget.chartConfig) : {}
+      const config = parseJson<Record<string, any>>(widget.chartConfig, {})
       return <ImageWidget src={config.src || config.url || ''} alt={resolvedTitle} linkUrl={config.linkUrl} fit={config.fit} borderRadius={config.borderRadius} />
     }
     return <div className="h-full flex items-center justify-center text-slate-400 text-sm">{t('common.no_data')}</div>

@@ -1136,5 +1136,16 @@
   "designer.row_color_add_value": "Добавить значение...",
   "designer.row_color_apply_to": "Применять к",
   "designer.row_color_mode_row": "Вся строка",
-  "designer.row_color_mode_cell": "Только ячейка"
+  "designer.row_color_mode_cell": "Только ячейка",
+  "common.error": "Что-то пошло не так",
+  "common.copied": "Скопировано",
+  "common.saved": "Сохранено",
+  "common.retry": "Повторить",
+  "common.render_error": "Эту часть не удалось показать",
+  "designer.save_first": "Сначала сохраните отчёт",
+  "scripts.run_to_see_output": "Запустите скрипт, чтобы увидеть результат",
+  "params.all_option": "-- все --",
+  "charts.drag_to_move": "перетащить",
+  "table.truncated": "(показаны первые строки)",
+  "table.truncated_hint": "Запрос вернул больше строк, чем показывает виджет; сузьте фильтр или добавьте LIMIT"
 }

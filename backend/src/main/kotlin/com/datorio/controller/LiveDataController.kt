@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
+import org.springframework.security.access.prepost.PreAuthorize
 
 /**
  * SSE (Server-Sent Events) endpoints for real-time dashboard updates.
@@ -38,6 +39,7 @@ class LiveDataController(
      *   - "widget-update"   : single widget data changed
      *   - "heartbeat"       : keep-alive every 25s
      */
+    @PreAuthorize("hasAuthority('REPORT_VIEW')")
     @GetMapping("/subscribe", produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
     fun subscribe(
         @RequestParam reportId: Long,
@@ -51,6 +53,7 @@ class LiveDataController(
      * Manually trigger a push update to all subscribers of a report.
      * Useful for testing or admin-triggered refreshes.
      */
+    @PreAuthorize("hasAnyAuthority('SYSTEM_ADMIN', 'REPORT_EDIT')")
     @PostMapping("/push/{reportId}")
     fun pushUpdate(
         @PathVariable reportId: Long,
@@ -67,6 +70,7 @@ class LiveDataController(
     /**
      * Get active subscription stats.
      */
+    @PreAuthorize("hasAnyAuthority('SYSTEM_ADMIN', 'REPORT_EDIT')")
     @GetMapping("/stats")
     fun stats(): ResponseEntity<Map<String, Any>> {
         val subs = liveDataService.getActiveSubscriptions()
@@ -80,6 +84,7 @@ class LiveDataController(
     /**
      * Disconnect all subscribers for a report.
      */
+    @PreAuthorize("hasAnyAuthority('SYSTEM_ADMIN', 'REPORT_EDIT')")
     @DeleteMapping("/disconnect/{reportId}")
     fun disconnect(@PathVariable reportId: Long): ResponseEntity<Void> {
         liveDataService.disconnectAll(reportId)

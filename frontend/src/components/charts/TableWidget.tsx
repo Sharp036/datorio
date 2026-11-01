@@ -481,6 +481,7 @@ export default function TableWidget({ data, title, chartConfig, onRowClick, clic
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">
             {data.rowCount} {t('common.rows')} · {data.executionMs}ms
+            {data.truncated && <span className="ml-1 text-amber-500" title={t('table.truncated_hint')}>{t('table.truncated')}</span>}
           </span>
           <select
             value={userPageSize || ''}

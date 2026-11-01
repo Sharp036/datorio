@@ -3,10 +3,16 @@ package com.datorio.service
 import com.datorio.model.*
 import com.datorio.model.dto.*
 import com.datorio.repository.*
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Duration
 import java.time.Instant
 
 @Service
@@ -14,9 +20,12 @@ class DataAlertService(
     private val alertRepo: DataAlertRepository,
     private val eventRepo: AlertEventRepository,
     private val renderService: ReportRenderService,
-    private val reportRepo: ReportRepository
+    private val reportRepo: ReportRepository,
+    private val emailService: EmailService,
+    private val objectMapper: ObjectMapper
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
+    private val httpClient: HttpClient by lazy { HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build() }
 
     @Transactional
     fun create(request: AlertCreateRequest): AlertResponse {
@@ -145,6 +154,8 @@ class DataAlertService(
                     thresholdValue = alert.thresholdValue,
                     message = buildMessage(alert, currentValue)
                 )
+                // The first trigger of a series is delivered; the following checks only record it
+                if (alert.consecutiveTriggers == 1) event.notified = notify(alert, event)
                 eventRepo.save(event)
                 log.warn("Alert '{}' TRIGGERED: {} {} {}",
                     alert.name, currentValue, alert.operator, alert.thresholdValue)
@@ -232,6 +243,38 @@ class DataAlertService(
                 val high = alert.thresholdHigh ?: return false
                 value in threshold..high
             }
+        }
+    }
+
+    /** Sends the event by email or to the webhook as the alert asks; IN_APP alerts are only recorded. */
+    private fun notify(alert: DataAlert, event: AlertEvent): Boolean {
+        return try {
+            when (alert.notificationType) {
+                NotificationType.IN_APP -> false
+                NotificationType.EMAIL -> {
+                    val recipients = (alert.recipients ?: "").split(',', ';').map { it.trim() }.filter { it.isNotEmpty() }
+                    recipients.isNotEmpty() && emailService.sendPlainEmail(recipients, "Datorio alert: ${alert.name}", event.message ?: "")
+                }
+                NotificationType.WEBHOOK -> {
+                    val url = alert.webhookUrl?.takeIf { it.isNotBlank() } ?: return false
+                    val body = objectMapper.writeValueAsString(mapOf(
+                        "alertId" to alert.id, "alertName" to alert.name, "reportId" to alert.reportId,
+                        "eventType" to event.eventType, "fieldName" to alert.fieldName, "value" to event.fieldValue,
+                        "threshold" to event.thresholdValue, "message" to event.message, "at" to Instant.now().toString()
+                    ))
+                    val request = HttpRequest.newBuilder(URI.create(url))
+                        .timeout(Duration.ofSeconds(15))
+                        .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString(body))
+                        .build()
+                    val status = httpClient.send(request, HttpResponse.BodyHandlers.discarding()).statusCode()
+                    if (status !in 200..299) log.warn("Webhook of alert '{}' answered {}", alert.name, status)
+                    status in 200..299
+                }
+            }
+        } catch (e: Exception) {
+            log.warn("Notification of alert '{}' failed: {}", alert.name, e.message)
+            false
         }
     }
 

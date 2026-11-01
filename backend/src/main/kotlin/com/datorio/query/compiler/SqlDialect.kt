@@ -117,7 +117,8 @@ class ClickHouseDialect : SqlDialect {
     }
 
     override fun formatStringLiteral(value: String): String {
-        return "'${value.replace("'", "\\'")}'"
+        // ClickHouse reads a backslash as an escape, so it is doubled before the quotes are escaped
+        return "'${value.replace("\\", "\\\\").replace("'", "\\'")}'"
     }
 
     override fun formatBooleanLiteral(value: Boolean): String {

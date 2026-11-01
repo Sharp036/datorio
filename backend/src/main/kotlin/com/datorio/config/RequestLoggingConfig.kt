@@ -26,8 +26,8 @@ class RequestLoggingConfig {
         }
         f.setIncludeClientInfo(true)
         f.setIncludeQueryString(true)
-        f.setIncludePayload(true)
-        f.setMaxPayloadLength(10_000)
+        // No payload: request bodies carry data source and user passwords and ad hoc SQL
+        f.setIncludePayload(false)
         f.setIncludeHeaders(false)
         return f
     }

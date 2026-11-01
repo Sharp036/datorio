@@ -5,6 +5,7 @@ import com.datorio.service.ControlService
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import org.springframework.security.access.prepost.PreAuthorize
 
 @RestController
 @RequestMapping("/controls")
@@ -14,24 +15,29 @@ class ControlController(
 
     // ─── Global Filter Config ───
 
+    @PreAuthorize("hasAuthority('REPORT_VIEW')")
     @GetMapping("/filters/{reportId}")
     fun getFilters(@PathVariable reportId: Long): ResponseEntity<List<GlobalFilterConfigResponse>> =
         ResponseEntity.ok(controlService.getFiltersForReport(reportId))
 
+    @PreAuthorize("hasAuthority('REPORT_VIEW')")
     @GetMapping("/filters/{reportId}/active")
     fun getActiveFilters(@PathVariable reportId: Long): ResponseEntity<List<GlobalFilterConfigResponse>> =
         ResponseEntity.ok(controlService.getActiveFilters(reportId))
 
+    @PreAuthorize("hasAuthority('REPORT_VIEW')")
     @GetMapping("/filters/{reportId}/sources")
     fun getFilterSources(@PathVariable reportId: Long): ResponseEntity<List<GlobalFilterConfigResponse>> =
         ResponseEntity.ok(controlService.getFilterSources(reportId))
 
+    @PreAuthorize("hasAuthority('REPORT_EDIT')")
     @PostMapping("/filters")
     fun saveFilter(
         @Valid @RequestBody request: GlobalFilterConfigRequest
     ): ResponseEntity<GlobalFilterConfigResponse> =
         ResponseEntity.ok(controlService.saveFilterConfig(request))
 
+    @PreAuthorize("hasAuthority('REPORT_EDIT')")
     @DeleteMapping("/filters/{reportId}/{widgetId}")
     fun deleteFilter(
         @PathVariable reportId: Long,
@@ -41,6 +47,7 @@ class ControlController(
         return ResponseEntity.noContent().build()
     }
 
+    @PreAuthorize("hasAuthority('REPORT_EDIT')")
     @PostMapping("/filters/{reportId}/resolve-targets")
     fun resolveTargets(
         @PathVariable reportId: Long,
@@ -51,18 +58,21 @@ class ControlController(
 
     // ─── Parameter Controls ───
 
+    @PreAuthorize("hasAuthority('REPORT_VIEW')")
     @GetMapping("/parameters/{reportId}")
     fun getParameterControls(
         @PathVariable reportId: Long
     ): ResponseEntity<List<ParameterControlResponse>> =
         ResponseEntity.ok(controlService.getParameterControls(reportId))
 
+    @PreAuthorize("hasAuthority('REPORT_EDIT')")
     @PostMapping("/parameters")
     fun saveParameterControl(
         @Valid @RequestBody request: ParameterControlRequest
     ): ResponseEntity<ParameterControlResponse> =
         ResponseEntity.ok(controlService.saveParameterControl(request))
 
+    @PreAuthorize("hasAuthority('REPORT_EDIT')")
     @DeleteMapping("/parameters/{reportId}/{parameterName}")
     fun deleteParameterControl(
         @PathVariable reportId: Long,
@@ -72,6 +82,7 @@ class ControlController(
         return ResponseEntity.noContent().build()
     }
 
+    @PreAuthorize("hasAuthority('REPORT_VIEW')")
     @GetMapping("/parameters/{reportId}/{parameterName}/options")
     fun loadOptions(
         @PathVariable reportId: Long,
@@ -82,6 +93,7 @@ class ControlController(
             controlService.loadParameterOptions(reportId, parameterName, allParams)
         )
 
+    @PreAuthorize("hasAuthority('REPORT_VIEW')")
     @GetMapping("/parameters/{reportId}/{parameterName}/search")
     fun searchOptions(
         @PathVariable reportId: Long,

@@ -18,14 +18,14 @@ RUN gradle :backend:bootJar --no-daemon -x test
 FROM node:20-alpine AS frontend-build
 WORKDIR /app
 COPY frontend/package*.json ./
-RUN npm install
+RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
 # ── Stage 3: Runtime ──
 FROM eclipse-temurin:21-jre-alpine
-LABEL maintainer="your-email@example.com"
-LABEL description="Datorio Platform"
+LABEL org.opencontainers.image.source="https://github.com/datorio-bi/datorio"
+LABEL org.opencontainers.image.description="Datorio: self-hosted BI for PostgreSQL and ClickHouse"
 
 # Install nginx for serving frontend + reverse proxy.
 # ALPINE_MIRROR replaces dl-cdn.alpinelinux.org when the build host cannot reach it.

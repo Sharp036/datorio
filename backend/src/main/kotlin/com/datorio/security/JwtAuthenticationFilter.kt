@@ -58,7 +58,7 @@ class JwtAuthenticationFilter(
             return header.substring(7)
         }
         // Fallback: token as query parameter (for SSE EventSource)
-        if (request.requestURI.startsWith("/live/")) {
+        if (request.servletPath.startsWith("/live/")) {
             return request.getParameter("token")
         }
         return null

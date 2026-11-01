@@ -3,7 +3,6 @@ package com.datorio.scheduling
 import com.datorio.service.ReportScheduleService
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
-import org.springframework.scheduling.support.CronExpression
 import org.springframework.stereotype.Component
 import java.time.Instant
 import java.time.LocalDateTime
@@ -61,7 +60,7 @@ class ReportScheduler(
      */
     private fun shouldRun(cronExpression: String, lastRunAt: Instant?, now: LocalDateTime): Boolean {
         return try {
-            val cron = CronExpression.parse(cronExpression)
+            val cron = CronExpressions.parse(cronExpression)
             val lastRun = lastRunAt
                 ?.let { LocalDateTime.ofInstant(it, ZoneOffset.UTC) }
                 ?: now.minusDays(1)

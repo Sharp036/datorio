@@ -5,9 +5,11 @@ import com.datorio.model.DataSourceType
 import com.datorio.model.dto.ColumnMeta
 import com.datorio.model.dto.ConnectionTestResult
 import com.datorio.model.dto.QueryResult
+import com.datorio.security.SecretCipher
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.sql.ResultSet
 import java.util.concurrent.ConcurrentHashMap
@@ -17,7 +19,11 @@ import java.util.concurrent.ConcurrentHashMap
  * Each DataSource gets its own HikariCP pool, cached by datasource ID.
  */
 @Component
-class ConnectionManager {
+class ConnectionManager(
+    private val secretCipher: SecretCipher,
+    // A query that runs longer is cancelled, so it does not hold a pool connection and the request thread
+    @Value("\${datorio.query.timeout-seconds:120}") private val queryTimeoutSeconds: Int
+) {
     private val log = LoggerFactory.getLogger(javaClass)
     private val pools = ConcurrentHashMap<Long, HikariDataSource>()
 
@@ -72,6 +78,7 @@ class ConnectionManager {
         return pool.connection.use { conn ->
             conn.createStatement().use { stmt ->
                 stmt.maxRows = limit + 1  // fetch one extra to detect truncation
+                if (queryTimeoutSeconds > 0) stmt.queryTimeout = queryTimeoutSeconds
                 val rs = stmt.executeQuery(sql)
                 val meta = rs.metaData
 
@@ -157,7 +164,7 @@ class ConnectionManager {
         val config = HikariConfig().apply {
             jdbcUrl = ds.buildJdbcUrl()
             username = ds.username
-            password = ds.passwordEnc  // TODO: decrypt in Phase 3
+            password = secretCipher.decrypt(ds.passwordEnc)
             maximumPoolSize = 5
             minimumIdle = 1
             connectionTimeout = 10_000

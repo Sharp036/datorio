@@ -1,0 +1,217 @@
+{
+  "formatVersion": 2,
+  "name": "Website analytics",
+  "description": "Visits of the sample store website in 2024-2025: sessions, visitors, devices, traffic sources, landing pages, the purchase funnel and countries.",
+  "reportType": "STANDARD",
+  "layout": "{\"filterPanel\": {\"position\": \"left\", \"collapsed\": false}}",
+  "settings": "{}",
+  "category": "Examples",
+  "parameters": [
+    {
+      "name": "date_from",
+      "label": "From",
+      "paramType": "DATE",
+      "defaultValue": "2025-01-01",
+      "isRequired": true,
+      "sortOrder": 0,
+      "config": "{}"
+    },
+    {
+      "name": "date_to",
+      "label": "To",
+      "paramType": "DATE",
+      "defaultValue": "2025-12-31",
+      "isRequired": true,
+      "sortOrder": 1,
+      "config": "{}"
+    },
+    {
+      "name": "device",
+      "label": "Device",
+      "paramType": "SELECT",
+      "defaultValue": "All",
+      "isRequired": true,
+      "sortOrder": 2,
+      "config": "{}"
+    },
+    {
+      "name": "country",
+      "label": "Country",
+      "paramType": "SELECT",
+      "defaultValue": "All",
+      "isRequired": true,
+      "sortOrder": 3,
+      "config": "{}"
+    }
+  ],
+  "widgets": [
+    {
+      "widgetType": "TEXT",
+      "title": null,
+      "body": "<p style=\"margin:0;font-size:13px;color:#475569;\">Generated page views of a sample store website, table <code>sample.page_views</code>. A session is a visit of 1-6 pages; a bounce is a session with one page. Click a country in the table at the bottom to filter the dashboard by it. The change is shown against the same period a year earlier.</p>",
+      "rawSql": null,
+      "chartConfig": "{}",
+      "position": "{\"x\": 0, \"y\": 0, \"w\": 24, \"h\": 1}",
+      "style": "{}",
+      "paramMapping": "{\"none\": \"none\"}",
+      "sortOrder": 0,
+      "isVisible": true
+    },
+    {
+      "widgetType": "KPI",
+      "title": "Sessions",
+      "body": null,
+      "rawSql": "SELECT\n    countIf(k_cur) AS `Sessions`,\n    if(countIf(k_prev) = 0, NULL, round((toFloat64(countIf(k_cur)) - toFloat64(countIf(k_prev))) / toFloat64(countIf(k_prev)) * 100, 1)) AS `Change, %`,\n    'vs a year earlier' AS `Compared with`\nFROM\n(\n    SELECT\n        session_id,\n        any(user_id) AS s_user,\n        count() AS s_views,\n        any(event_date) BETWEEN toDate(:date_from) AND toDate(:date_to) AS k_cur,\n        any(event_date) BETWEEN subtractYears(toDate(:date_from), 1) AND subtractYears(toDate(:date_to), 1) AS k_prev\n    FROM sample.page_views\n    WHERE (:device = 'All' OR device_type = :device)\n      AND (:country = 'All' OR country = :country)\n    GROUP BY session_id\n)",
+      "chartConfig": "{\"valueColumn\": \"Sessions\", \"deltaColumn\": \"Change, %\", \"labelColumn\": \"Compared with\", \"format\": \"plain\", \"decimals\": 0}",
+      "position": "{\"x\": 0, \"y\": 1, \"w\": 6, \"h\": 3}",
+      "style": "{}",
+      "paramMapping": "{\"date_from\": \"date_from\", \"date_to\": \"date_to\", \"device\": \"device\", \"country\": \"country\"}",
+      "sortOrder": 1,
+      "isVisible": true
+    },
+    {
+      "widgetType": "KPI",
+      "title": "Visitors",
+      "body": null,
+      "rawSql": "SELECT\n    uniqExactIf(s_user, k_cur) AS `Visitors`,\n    if(uniqExactIf(s_user, k_prev) = 0, NULL, round((toFloat64(uniqExactIf(s_user, k_cur)) - toFloat64(uniqExactIf(s_user, k_prev))) / toFloat64(uniqExactIf(s_user, k_prev)) * 100, 1)) AS `Change, %`,\n    'vs a year earlier' AS `Compared with`\nFROM\n(\n    SELECT\n        session_id,\n        any(user_id) AS s_user,\n        count() AS s_views,\n        any(event_date) BETWEEN toDate(:date_from) AND toDate(:date_to) AS k_cur,\n        any(event_date) BETWEEN subtractYears(toDate(:date_from), 1) AND subtractYears(toDate(:date_to), 1) AS k_prev\n    FROM sample.page_views\n    WHERE (:device = 'All' OR device_type = :device)\n      AND (:country = 'All' OR country = :country)\n    GROUP BY session_id\n)",
+      "chartConfig": "{\"valueColumn\": \"Visitors\", \"deltaColumn\": \"Change, %\", \"labelColumn\": \"Compared with\", \"format\": \"plain\", \"decimals\": 0}",
+      "position": "{\"x\": 6, \"y\": 1, \"w\": 6, \"h\": 3}",
+      "style": "{}",
+      "paramMapping": "{\"date_from\": \"date_from\", \"date_to\": \"date_to\", \"device\": \"device\", \"country\": \"country\"}",
+      "sortOrder": 2,
+      "isVisible": true
+    },
+    {
+      "widgetType": "KPI",
+      "title": "Page views",
+      "body": null,
+      "rawSql": "SELECT\n    sumIf(s_views, k_cur) AS `Page views`,\n    if(sumIf(s_views, k_prev) = 0, NULL, round((toFloat64(sumIf(s_views, k_cur)) - toFloat64(sumIf(s_views, k_prev))) / toFloat64(sumIf(s_views, k_prev)) * 100, 1)) AS `Change, %`,\n    'vs a year earlier' AS `Compared with`\nFROM\n(\n    SELECT\n        session_id,\n        any(user_id) AS s_user,\n        count() AS s_views,\n        any(event_date) BETWEEN toDate(:date_from) AND toDate(:date_to) AS k_cur,\n        any(event_date) BETWEEN subtractYears(toDate(:date_from), 1) AND subtractYears(toDate(:date_to), 1) AS k_prev\n    FROM sample.page_views\n    WHERE (:device = 'All' OR device_type = :device)\n      AND (:country = 'All' OR country = :country)\n    GROUP BY session_id\n)",
+      "chartConfig": "{\"valueColumn\": \"Page views\", \"deltaColumn\": \"Change, %\", \"labelColumn\": \"Compared with\", \"format\": \"plain\", \"decimals\": 0}",
+      "position": "{\"x\": 12, \"y\": 1, \"w\": 6, \"h\": 3}",
+      "style": "{}",
+      "paramMapping": "{\"date_from\": \"date_from\", \"date_to\": \"date_to\", \"device\": \"device\", \"country\": \"country\"}",
+      "sortOrder": 3,
+      "isVisible": true
+    },
+    {
+      "widgetType": "KPI",
+      "title": "Bounce rate, %",
+      "body": null,
+      "rawSql": "SELECT\n    round(countIf(k_cur AND s_views = 1) / greatest(countIf(k_cur), 1) * 100, 1) AS `Bounce rate, %`,\n    if(round(countIf(k_prev AND s_views = 1) / greatest(countIf(k_prev), 1) * 100, 1) = 0, NULL, round((toFloat64(round(countIf(k_cur AND s_views = 1) / greatest(countIf(k_cur), 1) * 100, 1)) - toFloat64(round(countIf(k_prev AND s_views = 1) / greatest(countIf(k_prev), 1) * 100, 1))) / toFloat64(round(countIf(k_prev AND s_views = 1) / greatest(countIf(k_prev), 1) * 100, 1)) * 100, 1)) AS `Change, %`,\n    'vs a year earlier' AS `Compared with`\nFROM\n(\n    SELECT\n        session_id,\n        any(user_id) AS s_user,\n        count() AS s_views,\n        any(event_date) BETWEEN toDate(:date_from) AND toDate(:date_to) AS k_cur,\n        any(event_date) BETWEEN subtractYears(toDate(:date_from), 1) AND subtractYears(toDate(:date_to), 1) AS k_prev\n    FROM sample.page_views\n    WHERE (:device = 'All' OR device_type = :device)\n      AND (:country = 'All' OR country = :country)\n    GROUP BY session_id\n)",
+      "chartConfig": "{\"valueColumn\": \"Bounce rate, %\", \"deltaColumn\": \"Change, %\", \"labelColumn\": \"Compared with\", \"format\": \"plain\", \"decimals\": 1}",
+      "position": "{\"x\": 18, \"y\": 1, \"w\": 6, \"h\": 3}",
+      "style": "{}",
+      "paramMapping": "{\"date_from\": \"date_from\", \"date_to\": \"date_to\", \"device\": \"device\", \"country\": \"country\"}",
+      "sortOrder": 4,
+      "isVisible": true
+    },
+    {
+      "widgetType": "CHART",
+      "title": "Sessions by week and device",
+      "body": null,
+      "rawSql": "SELECT\n    formatDateTime(toMonday(event_date), '%Y-%m-%d') AS `Week`,\n    uniqExactIf(session_id, device_type = 'desktop') AS `Desktop`,\n    uniqExactIf(session_id, device_type = 'mobile') AS `Mobile`,\n    uniqExactIf(session_id, device_type = 'tablet') AS `Tablet`\nFROM sample.page_views\nWHERE event_date BETWEEN toDate(:date_from) AND toDate(:date_to)\n  AND (:device = 'All' OR device_type = :device)\n  AND (:country = 'All' OR country = :country)\nGROUP BY `Week`\nORDER BY `Week`",
+      "chartConfig": "{\"type\": \"area\", \"stacked\": true, \"smooth\": true, \"categoryField\": \"Week\", \"valueFields\": [\"Desktop\", \"Mobile\", \"Tablet\"], \"showLegend\": true, \"legendPosition\": \"bottom\", \"yAxisFormat\": \"plain\", \"yAxisDecimals\": 0, \"description\": \"Weeks start on Monday; the first and the last week of the period can be partial.\"}",
+      "position": "{\"x\": 0, \"y\": 4, \"w\": 24, \"h\": 7}",
+      "style": "{}",
+      "paramMapping": "{\"date_from\": \"date_from\", \"date_to\": \"date_to\", \"device\": \"device\", \"country\": \"country\"}",
+      "sortOrder": 5,
+      "isVisible": true
+    },
+    {
+      "widgetType": "CHART",
+      "title": "Traffic sources",
+      "body": null,
+      "rawSql": "SELECT\n    if(referrer = '', 'Direct', referrer) AS `Source`,\n    count() AS `Sessions`\nFROM sample.page_views\nWHERE event_date BETWEEN toDate(:date_from) AND toDate(:date_to)\n  AND (:device = 'All' OR device_type = :device)\n  AND (:country = 'All' OR country = :country)\n  AND NOT startsWith(referrer, '/')\nGROUP BY `Source`\nORDER BY `Sessions` DESC",
+      "chartConfig": "{\"type\": \"pie\", \"donut\": true, \"categoryField\": \"Source\", \"valueFields\": [\"Sessions\"], \"showLegend\": true, \"legendPosition\": \"bottom\"}",
+      "position": "{\"x\": 0, \"y\": 11, \"w\": 8, \"h\": 6}",
+      "style": "{}",
+      "paramMapping": "{\"date_from\": \"date_from\", \"date_to\": \"date_to\", \"device\": \"device\", \"country\": \"country\"}",
+      "sortOrder": 6,
+      "isVisible": true
+    },
+    {
+      "widgetType": "CHART",
+      "title": "Landing pages",
+      "body": null,
+      "rawSql": "SELECT\n    page_url AS `Landing page`,\n    count() AS `Sessions`\nFROM sample.page_views\nWHERE event_date BETWEEN toDate(:date_from) AND toDate(:date_to)\n  AND (:device = 'All' OR device_type = :device)\n  AND (:country = 'All' OR country = :country)\n  AND NOT startsWith(referrer, '/')\nGROUP BY page_url\nORDER BY `Sessions`",
+      "chartConfig": "{\"type\": \"bar\", \"orientation\": \"horizontal\", \"categoryField\": \"Landing page\", \"valueFields\": [\"Sessions\"], \"showLegend\": false, \"yAxisFormat\": \"plain\", \"yAxisDecimals\": 0}",
+      "position": "{\"x\": 8, \"y\": 11, \"w\": 8, \"h\": 6}",
+      "style": "{}",
+      "paramMapping": "{\"date_from\": \"date_from\", \"date_to\": \"date_to\", \"device\": \"device\", \"country\": \"country\"}",
+      "sortOrder": 7,
+      "isVisible": true
+    },
+    {
+      "widgetType": "CHART",
+      "title": "Purchase funnel",
+      "body": null,
+      "rawSql": "SELECT\n    f_step AS `Step`,\n    f_sessions AS `Sessions`\nFROM\n(\n    SELECT 1 AS f_order, 'All sessions' AS f_step, uniqExactIf(session_id, 1) AS f_sessions\n    FROM sample.page_views\n    WHERE event_date BETWEEN toDate(:date_from) AND toDate(:date_to)\n      AND (:device = 'All' OR device_type = :device)\n      AND (:country = 'All' OR country = :country)\n    UNION ALL\n    SELECT 2 AS f_order, 'Viewed products' AS f_step, uniqExactIf(session_id, startsWith(page_url, '/products')) AS f_sessions\n    FROM sample.page_views\n    WHERE event_date BETWEEN toDate(:date_from) AND toDate(:date_to)\n      AND (:device = 'All' OR device_type = :device)\n      AND (:country = 'All' OR country = :country)\n    UNION ALL\n    SELECT 3 AS f_order, 'Opened the cart' AS f_step, uniqExactIf(session_id, page_url = '/cart') AS f_sessions\n    FROM sample.page_views\n    WHERE event_date BETWEEN toDate(:date_from) AND toDate(:date_to)\n      AND (:device = 'All' OR device_type = :device)\n      AND (:country = 'All' OR country = :country)\n    UNION ALL\n    SELECT 4 AS f_order, 'Reached checkout' AS f_step, uniqExactIf(session_id, page_url = '/checkout') AS f_sessions\n    FROM sample.page_views\n    WHERE event_date BETWEEN toDate(:date_from) AND toDate(:date_to)\n      AND (:device = 'All' OR device_type = :device)\n      AND (:country = 'All' OR country = :country)\n)\nORDER BY f_order",
+      "chartConfig": "{\"type\": \"funnel\", \"categoryField\": \"Step\", \"valueFields\": [\"Sessions\"]}",
+      "position": "{\"x\": 16, \"y\": 11, \"w\": 8, \"h\": 6}",
+      "style": "{}",
+      "paramMapping": "{\"date_from\": \"date_from\", \"date_to\": \"date_to\", \"device\": \"device\", \"country\": \"country\"}",
+      "sortOrder": 8,
+      "isVisible": true
+    },
+    {
+      "widgetType": "TABLE",
+      "title": "Countries",
+      "body": null,
+      "rawSql": "SELECT\n    s_country AS `Country`,\n    count() AS `Sessions`,\n    uniqExact(s_user) AS `Visitors`,\n    round(avg(s_views), 2) AS `Pages per session`,\n    round(countIf(s_views = 1) / count() * 100, 1) AS `Bounce rate, %`\nFROM\n(\n    SELECT session_id, any(country) AS s_country, any(user_id) AS s_user, count() AS s_views\n    FROM sample.page_views\n    WHERE event_date BETWEEN toDate(:date_from) AND toDate(:date_to)\n      AND (:device = 'All' OR device_type = :device)\n      AND (:country = 'All' OR country = :country)\n    GROUP BY session_id\n)\nGROUP BY s_country\nORDER BY `Sessions` DESC",
+      "chartConfig": "{\"tableDensity\": \"compact\", \"clickParams\": [{\"column\": \"Country\", \"param\": \"country\"}], \"description\": \"Click a row to filter the dashboard by the country.\"}",
+      "position": "{\"x\": 0, \"y\": 17, \"w\": 24, \"h\": 6}",
+      "style": "{}",
+      "paramMapping": "{\"date_from\": \"date_from\", \"date_to\": \"date_to\", \"device\": \"device\", \"country\": \"country\"}",
+      "sortOrder": 9,
+      "isVisible": true
+    }
+  ],
+  "containers": [],
+  "parameterControls": [
+    {
+      "parameterName": "date_from",
+      "controlType": "DATE_PICKER",
+      "datasourceId": null,
+      "optionsQuery": null,
+      "sliderMin": null,
+      "sliderMax": null,
+      "sliderStep": 1.0,
+      "config": "{}",
+      "sortOrder": 0
+    },
+    {
+      "parameterName": "date_to",
+      "controlType": "DATE_PICKER",
+      "datasourceId": null,
+      "optionsQuery": null,
+      "sliderMin": null,
+      "sliderMax": null,
+      "sliderStep": 1.0,
+      "config": "{}",
+      "sortOrder": 1
+    },
+    {
+      "parameterName": "device",
+      "controlType": "DROPDOWN",
+      "datasourceId": null,
+      "optionsQuery": "SELECT ['All', 'desktop', 'mobile', 'tablet'][o_order] AS o_value\nFROM\n(\n    SELECT arrayJoin(arrayEnumerate(['All', 'desktop', 'mobile', 'tablet'])) AS o_order\n)\nORDER BY o_order",
+      "sliderMin": null,
+      "sliderMax": null,
+      "sliderStep": 1.0,
+      "config": "{}",
+      "sortOrder": 2
+    },
+    {
+      "parameterName": "country",
+      "controlType": "DROPDOWN",
+      "datasourceId": null,
+      "optionsQuery": "SELECT ['All', 'BR', 'CA', 'DE', 'FR', 'IN', 'JP', 'PL', 'UK', 'US'][o_order] AS o_value\nFROM\n(\n    SELECT arrayJoin(arrayEnumerate(['All', 'BR', 'CA', 'DE', 'FR', 'IN', 'JP', 'PL', 'UK', 'US'])) AS o_order\n)\nORDER BY o_order",
+      "sliderMin": null,
+      "sliderMax": null,
+      "sliderStep": 1.0,
+      "config": "{}",
+      "sortOrder": 3
+    }
+  ],
+  "actions": []
+}

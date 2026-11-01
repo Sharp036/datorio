@@ -3,8 +3,11 @@ package com.datorio.service
 import com.datorio.model.*
 import com.datorio.model.dto.*
 import com.datorio.repository.ReportRepository
+import com.datorio.repository.SavedQueryRepository
 import com.datorio.model.dto.ContainerRequest
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ArrayNode
+import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.kotlin.readValue
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Pageable
@@ -19,7 +22,8 @@ class TemplateService(
     private val vizService: VisualizationService,
     private val controlService: ControlService,
     private val interactiveService: InteractiveDashboardService,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
+    private val savedQueryRepository: SavedQueryRepository
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -95,9 +99,26 @@ class TemplateService(
                 },
                 tabNames = c.tabNames,
                 activeTab = c.activeTab,
-                sortOrder = c.sortOrder
+                sortOrder = c.sortOrder,
+                autoDistribute = c.autoDistribute,
+                config = objectMapper.writeValueAsString(c.config)
             )
         }
+
+        // NAVIGATE actions open another report of this installation by its id, so they are not exported
+        val actions = interactiveService.getActiveActionsForReport(reportId)
+            .filter { it.actionType != "NAVIGATE" }
+            .map { a ->
+                ActionExportConfig(
+                    name = a.name, actionType = a.actionType, triggerType = a.triggerType,
+                    sourceWidgetSortOrder = a.sourceWidgetId?.let { widgetIdToSortOrder[it] },
+                    targetWidgetSortOrders = a.targetWidgetIds?.let { t ->
+                        mapWidgetTargets(t) { id -> widgetIdToSortOrder[id]?.toLong() }
+                    },
+                    sourceField = a.sourceField, targetField = a.targetField, urlTemplate = a.urlTemplate,
+                    config = objectMapper.writeValueAsString(a.config)
+                )
+            }
 
         return ReportExportConfig(
             name = report.name,
@@ -114,7 +135,11 @@ class TemplateService(
                 )
             },
             widgets = report.widgets.sortedBy { it.sortOrder }.let { sortedWidgets ->
-                val layersByWidget = interactiveService.getLayersForWidgets(sortedWidgets.map { it.id })
+                val widgetIds = sortedWidgets.map { it.id }
+                val layersByWidget = interactiveService.getLayersForWidgets(widgetIds)
+                val annotationsByWidget = vizService.getAnnotationsForWidgets(widgetIds)
+                val tooltipByWidget = vizService.getTooltipConfigs(widgetIds)
+                val rulesByWidget = interactiveService.getRulesForWidgets(widgetIds)
                 sortedWidgets.map { w ->
                     val layers = (layersByWidget[w.id] ?: emptyList()).map { layer ->
                         ChartLayerExportConfig(
@@ -128,10 +153,38 @@ class TemplateService(
                     }
                     WidgetExportConfig(
                         widgetType = w.widgetType, title = w.title, body = w.body,
-                        rawSql = w.rawSql, chartConfig = w.chartConfig,
+                        // A saved query is an object of this installation: the export carries its SQL instead
+                        rawSql = w.rawSql ?: w.queryId?.let { savedQueryRepository.findById(it).orElse(null)?.sqlText },
+                        chartConfig = remapToggledWidgets(w.chartConfig, TOGGLE_IDS, TOGGLE_SORT_ORDERS) {
+                            widgetIdToSortOrder[it]?.toLong()
+                        },
                         position = w.position, style = w.style,
                         paramMapping = w.paramMapping, sortOrder = w.sortOrder,
-                        isVisible = w.isVisible, layers = layers
+                        isVisible = w.isVisible, layers = layers,
+                        annotations = (annotationsByWidget[w.id] ?: emptyList()).map { a ->
+                            AnnotationExportConfig(
+                                annotationType = a.annotationType, axis = a.axis, value = a.value,
+                                valueEnd = a.valueEnd, label = a.label, color = a.color,
+                                lineStyle = a.lineStyle, lineWidth = a.lineWidth, opacity = a.opacity,
+                                fillColor = a.fillColor, fillOpacity = a.fillOpacity, position = a.position,
+                                fontSize = a.fontSize, isVisible = a.isVisible, sortOrder = a.sortOrder,
+                                config = objectMapper.writeValueAsString(a.config)
+                            )
+                        },
+                        tooltip = tooltipByWidget[w.id]?.let { t ->
+                            TooltipExportConfig(
+                                isEnabled = t.isEnabled, showTitle = t.showTitle, titleField = t.titleField,
+                                fields = t.fields, showSparkline = t.showSparkline,
+                                sparklineField = t.sparklineField, htmlTemplate = t.htmlTemplate,
+                                config = objectMapper.writeValueAsString(t.config)
+                            )
+                        },
+                        visibilityRules = (rulesByWidget[w.id] ?: emptyList()).filter { it.isActive }.map { r ->
+                            VisibilityRuleExportConfig(
+                                ruleType = r.ruleType, parameterName = r.parameterName,
+                                operator = r.operator, expectedValue = r.expectedValue
+                            )
+                        }
                     )
                 }
             },
@@ -147,6 +200,15 @@ class TemplateService(
                     sliderStep = c.sliderStep,
                     config = objectMapper.writeValueAsString(c.config),
                     sortOrder = c.sortOrder
+                )
+            },
+            actions = actions,
+            overlays = interactiveService.getOverlaysForReport(reportId).map { o ->
+                OverlayExportConfig(
+                    overlayType = o.overlayType, content = o.content,
+                    positionX = o.positionX, positionY = o.positionY, width = o.width, height = o.height,
+                    opacity = o.opacity, zIndex = o.zIndex, linkUrl = o.linkUrl, isVisible = o.isVisible,
+                    style = objectMapper.writeValueAsString(o.style)
                 )
             }
         )
@@ -204,8 +266,20 @@ class TemplateService(
                     childWidgetIds = childIds,
                     tabNames = c.tabNames,
                     activeTab = c.activeTab,
+                    autoDistribute = c.autoDistribute,
+                    config = readMap(c.config),
                     sortOrder = c.sortOrder
                 ))
+            }
+        }
+
+        // Buttons name the widgets they show or hide by sortOrder in the export; put the new ids back
+        created.widgets.forEach { w ->
+            val chartConfig = remapToggledWidgets(w.chartConfig, TOGGLE_SORT_ORDERS, TOGGLE_IDS) {
+                sortOrderToWidgetId[it.toInt()]
+            }
+            if (chartConfig != w.chartConfig) {
+                reportService.updateWidget(w.id, UpdateWidgetRequest(chartConfig = chartConfig), userId)
             }
         }
 
@@ -242,11 +316,34 @@ class TemplateService(
             }
         }
 
-        // Create layers for widgets that have them
+        // Create layers, annotations, tooltips and visibility rules of the widgets
         var totalLayers = 0
         cfg.widgets.forEach { wCfg ->
-            if (wCfg.layers.isEmpty()) return@forEach
             val newWidgetId = sortOrderToWidgetId[wCfg.sortOrder] ?: return@forEach
+            wCfg.annotations.forEach { a ->
+                vizService.createAnnotation(AnnotationRequest(
+                    widgetId = newWidgetId, annotationType = a.annotationType, axis = a.axis,
+                    value = a.value, valueEnd = a.valueEnd, label = a.label, color = a.color,
+                    lineStyle = a.lineStyle, lineWidth = a.lineWidth, opacity = a.opacity,
+                    fillColor = a.fillColor, fillOpacity = a.fillOpacity, position = a.position,
+                    fontSize = a.fontSize, isVisible = a.isVisible, sortOrder = a.sortOrder,
+                    config = readMap(a.config)
+                ))
+            }
+            wCfg.tooltip?.let { t ->
+                vizService.saveTooltipConfig(TooltipConfigRequest(
+                    widgetId = newWidgetId, isEnabled = t.isEnabled, showTitle = t.showTitle,
+                    titleField = t.titleField, fields = t.fields, showSparkline = t.showSparkline,
+                    sparklineField = t.sparklineField, htmlTemplate = t.htmlTemplate,
+                    config = readMap(t.config)
+                ))
+            }
+            wCfg.visibilityRules.forEach { r ->
+                interactiveService.createVisibilityRule(VisibilityRuleRequest(
+                    widgetId = newWidgetId, ruleType = r.ruleType, parameterName = r.parameterName,
+                    operator = r.operator, expectedValue = r.expectedValue
+                ))
+            }
             wCfg.layers.forEach { lCfg ->
                 val seriesConfigMap: Map<String, Any?> = try {
                     objectMapper.readValue(lCfg.seriesConfig)
@@ -268,9 +365,35 @@ class TemplateService(
             }
         }
 
-        log.info("Imported report '{}' (id={}, widgets={}, params={}, controls={}, layers={})",
+        cfg.actions.forEach { a ->
+            val sourceId = a.sourceWidgetSortOrder?.let { sortOrderToWidgetId[it] }
+            if (a.sourceWidgetSortOrder != null && sourceId == null) {
+                log.warn("Action '{}' skipped: no widget with sortOrder {}", a.name, a.sourceWidgetSortOrder)
+                return@forEach
+            }
+            interactiveService.createAction(DashboardActionRequest(
+                reportId = created.id, name = a.name, actionType = a.actionType, triggerType = a.triggerType,
+                sourceWidgetId = sourceId,
+                targetWidgetIds = a.targetWidgetSortOrders?.let { t ->
+                    mapWidgetTargets(t) { sortOrderToWidgetId[it.toInt()] }
+                },
+                sourceField = a.sourceField, targetField = a.targetField, urlTemplate = a.urlTemplate,
+                config = readMap(a.config)
+            ))
+        }
+
+        cfg.overlays.forEach { o ->
+            interactiveService.createOverlay(OverlayRequest(
+                reportId = created.id, overlayType = o.overlayType, content = o.content,
+                positionX = o.positionX, positionY = o.positionY, width = o.width, height = o.height,
+                opacity = o.opacity, zIndex = o.zIndex, linkUrl = o.linkUrl, isVisible = o.isVisible,
+                style = readMap(o.style)
+            ))
+        }
+
+        log.info("Imported report '{}' (id={}, widgets={}, params={}, controls={}, layers={}, actions={}, overlays={})",
             reportName, created.id, created.widgets.size, created.parameters.size,
-            cfg.parameterControls.size, totalLayers)
+            cfg.parameterControls.size, totalLayers, cfg.actions.size, cfg.overlays.size)
 
         return ImportResult(
             reportId = created.id,
@@ -282,10 +405,42 @@ class TemplateService(
 
     // ═══════════════════════════════════════════
 
+    private fun readMap(json: String): Map<String, Any?> =
+        try { objectMapper.readValue(json) } catch (_: Exception) { emptyMap() }
+
+    // Target list of an action: widget ids separated by commas, "*" for all widgets, "-N" excludes widget N.
+    // Targets that do not map are dropped.
+    private fun mapWidgetTargets(targets: String, map: (Long) -> Long?): String =
+        targets.split(",").map { it.trim() }.mapNotNull { t ->
+            when {
+                t == "*" -> t
+                t.startsWith("-") -> t.drop(1).toLongOrNull()?.let(map)?.let { "-$it" }
+                else -> t.toLongOrNull()?.let(map)?.toString()
+            }
+        }.joinToString(",")
+
+    // Moves the widget list of a button from one chartConfig key to the other, mapping every element
+    private fun remapToggledWidgets(chartConfig: String, from: String, to: String, map: (Long) -> Long?): String {
+        val root = try { objectMapper.readTree(chartConfig) as? ObjectNode } catch (_: Exception) { null }
+            ?: return chartConfig
+        val ids = root.get(from)?.takeIf { it.isArray } ?: return chartConfig
+        val mapped = objectMapper.createArrayNode()
+        ids.forEach { node -> map(node.asLong())?.let { mapped.add(it) } }
+        root.remove(from)
+        root.set<ArrayNode>(to, mapped)
+        return objectMapper.writeValueAsString(root)
+    }
+
     private fun Report.toTemplateItem() = TemplateListItem(
         id = id, name = name, description = description,
         category = templateCategory, preview = templatePreview,
         thumbnailUrl = thumbnailUrl, widgetCount = widgets.size,
         createdAt = createdAt.toString()
     )
+
+    companion object {
+        // Button chartConfig keys: widget ids in the report, widget sortOrders in the export
+        private const val TOGGLE_IDS = "toggleWidgetIds"
+        private const val TOGGLE_SORT_ORDERS = "toggleWidgetSortOrders"
+    }
 }

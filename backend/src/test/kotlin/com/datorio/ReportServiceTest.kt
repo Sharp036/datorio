@@ -340,7 +340,7 @@ class ReportScheduleServiceTest {
         reportRepo = mock()
         renderService = mock()
         objectMapper = jacksonObjectMapper()
-        scheduleService = ReportScheduleService(scheduleRepo, reportRepo, renderService, objectMapper)
+        scheduleService = ReportScheduleService(scheduleRepo, reportRepo, renderService, objectMapper, mock())
     }
 
     @Test

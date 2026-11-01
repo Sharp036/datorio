@@ -118,7 +118,7 @@ export const useActionStore = create<ActionState>((set, get) => ({
 
         case 'NAVIGATE': {
           if (action.targetReportId) {
-            window.location.href = `/reports/${action.targetReportId}/view`
+            window.location.href = `/reports/${action.targetReportId}`
           }
           break
         }

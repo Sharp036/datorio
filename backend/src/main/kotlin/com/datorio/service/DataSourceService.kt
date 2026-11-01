@@ -4,8 +4,12 @@ import com.datorio.datasource.ConnectionManager
 import com.datorio.datasource.TableInfo
 import com.datorio.model.DataSource
 import com.datorio.model.dto.*
+import com.datorio.query.ReadOnlySql
 import com.datorio.repository.DataSourceRepository
+import com.datorio.repository.ImportSourceRepository
+import com.datorio.repository.SavedQueryRepository
 import com.datorio.repository.UserRepository
+import com.datorio.security.SecretCipher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -13,7 +17,10 @@ import org.springframework.transaction.annotation.Transactional
 class DataSourceService(
     private val dataSourceRepository: DataSourceRepository,
     private val userRepository: UserRepository,
-    private val connectionManager: ConnectionManager
+    private val connectionManager: ConnectionManager,
+    private val secretCipher: SecretCipher,
+    private val savedQueryRepository: SavedQueryRepository,
+    private val importSourceRepository: ImportSourceRepository
 ) {
     fun findAll(): List<DataSourceResponse> {
         return dataSourceRepository.findByIsActiveTrue().map { it.toResponse() }
@@ -34,7 +41,7 @@ class DataSourceService(
             port = request.port,
             databaseName = request.databaseName,
             username = request.username,
-            passwordEnc = request.password,  // TODO: encrypt
+            passwordEnc = secretCipher.encrypt(request.password),
             extraParams = request.extraParams,
             createdBy = user
         )
@@ -51,7 +58,9 @@ class DataSourceService(
         ds.databaseName = request.databaseName
         ds.username = request.username
         if (request.password != null) {
-            ds.passwordEnc = request.password  // TODO: encrypt
+            ds.passwordEnc = secretCipher.encrypt(request.password)
+        } else if (!secretCipher.isEncrypted(ds.passwordEnc)) {
+            ds.passwordEnc = secretCipher.encrypt(ds.passwordEnc)
         }
         ds.extraParams = request.extraParams
         ds.updatedAt = java.time.OffsetDateTime.now()
@@ -62,6 +71,14 @@ class DataSourceService(
 
     @Transactional
     fun delete(id: Long) {
+        getEntity(id)
+        // Saved queries, import sources and data models point at the data source; a foreign key error
+        // would be a 500 with no explanation, so name what still uses it
+        val queries = savedQueryRepository.findByDatasourceId(id).size
+        val sources = importSourceRepository.findAll().count { it.datasource.id == id }
+        require(queries == 0 && sources == 0) {
+            "The data source is still used by $queries saved query(ies) and $sources import source(s); delete or move them first"
+        }
         connectionManager.evictPool(id)
         dataSourceRepository.deleteById(id)
     }
@@ -73,17 +90,7 @@ class DataSourceService(
 
     fun executeQuery(request: QueryExecuteRequest): QueryResult {
         val ds = getEntity(request.datasourceId)
-        // Basic SQL injection prevention: block DDL/DML
-        // Strip leading single-line comments before checking query type
-        val normalizedSql = request.sql.trim()
-            .lines()
-            .dropWhile { it.trimStart().startsWith("--") || it.isBlank() }
-            .joinToString("\n")
-            .trim()
-            .uppercase()
-        require(normalizedSql.startsWith("SELECT") || normalizedSql.startsWith("WITH")) {
-            "Only SELECT queries are allowed. Use the database admin tools for DDL/DML operations."
-        }
+        ReadOnlySql.requireReadOnly(request.sql)
         return connectionManager.executeQuery(ds, request.sql, request.limit)
     }
 

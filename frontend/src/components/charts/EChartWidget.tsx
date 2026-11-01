@@ -745,7 +745,7 @@ export default function EChartWidget({ data, chartConfig, title, onChartClick, c
               whiteSpace: 'nowrap',
             }}
           >
-            ↕ перетащить
+            {t('charts.drag_to_move')}
           </div>
         )}
       </div>

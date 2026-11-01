@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { useAuthStore } from '@/store/authStore'
 
 export type LiveStatus = 'disconnected' | 'connecting' | 'connected' | 'error'
 
@@ -71,7 +70,7 @@ export function useLiveData(options: UseLiveDataOptions) {
     setStatus('connecting')
 
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || ''
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api'
       const url = `${baseUrl}/live/subscribe?reportId=${reportId}`
 
       const response = await fetch(url, {

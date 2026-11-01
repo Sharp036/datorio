@@ -38,7 +38,8 @@ export default function EnhancedParameterPanel({
     if (!raw) return ''
     const token = raw.toLowerCase()
     const now = new Date()
-    const toDate = (d: Date) => d.toISOString().slice(0, 10)
+    // Local calendar date: toISOString() would give the previous day east of UTC before the offset passes
+    const toDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     if (token === 'today' || token === '__today__' || token === '${today}') return toDate(now)
     if (token === 'start_of_year' || token === '__start_of_year__' || token === '${start_of_year}') {
       return toDate(new Date(now.getFullYear(), 0, 1))
@@ -470,6 +471,7 @@ function TypeaheadControl({ value, paramName, reportId, columnName, initialOptio
   parentValues?: Record<string, string>
   onChange: (v: string) => void
 }) {
+  const { t } = useTranslation()
   const [query, setQuery] = useState(value)
   const [options, setOptions] = useState<string[]>(initialOptions || [])
   const [open, setOpen] = useState(false)
@@ -543,7 +545,7 @@ function TypeaheadControl({ value, paramName, reportId, columnName, initialOptio
                 onClick={() => handleSelect('')}
                 className="w-full text-left px-3 py-1.5 text-xs text-slate-400 hover:bg-surface-50 dark:hover:bg-dark-surface-100 border-b border-surface-100 dark:border-dark-surface-100"
               >
-                -- все --
+                {t('params.all_option')}
               </button>
               {options.map(opt => (
                 <button

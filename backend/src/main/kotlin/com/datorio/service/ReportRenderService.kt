@@ -148,7 +148,10 @@ class ReportRenderService(
         for (param in report.parameters) {
             val value = provided[param.name]
             if (value != null) {
-                resolved[param.name] = value
+                // The parameter panel sends a multi-select as "a,b"; the resolver needs a list to build an IN list
+                resolved[param.name] = if (param.paramType == ParamType.MULTI_SELECT && value is String) {
+                    value.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+                } else value
             } else if (param.defaultValue != null) {
                 resolved[param.name] = resolveDefaultValue(param)
             } else if (param.isRequired) {
@@ -273,7 +276,8 @@ class ReportRenderService(
                     columns = result.columns.map { it.name },
                     rows = result.rows,
                     rowCount = result.rowCount,
-                    executionMs = System.currentTimeMillis() - startMs
+                    executionMs = System.currentTimeMillis() - startMs,
+                    truncated = result.truncated
                 )
             }
 
@@ -294,7 +298,8 @@ class ReportRenderService(
                     columns = result.columns.map { it.name },
                     rows = result.rows,
                     rowCount = result.rowCount,
-                    executionMs = System.currentTimeMillis() - startMs
+                    executionMs = System.currentTimeMillis() - startMs,
+                    truncated = result.truncated
                 )
             }
 

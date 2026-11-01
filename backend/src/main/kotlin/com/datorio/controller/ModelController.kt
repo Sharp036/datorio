@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.web.bind.annotation.*
+import org.springframework.security.access.prepost.PreAuthorize
 
 @RestController
 @RequestMapping("/modeling")
@@ -22,14 +23,17 @@ class ModelController(
 
     // ─── Models ───
 
+    @PreAuthorize("hasAuthority('REPORT_VIEW')")
     @GetMapping("/models")
     fun list(@AuthenticationPrincipal user: UserDetails): ResponseEntity<List<DataModelResponse>> =
         ResponseEntity.ok(modelService.getModels(getUserId(user)))
 
+    @PreAuthorize("hasAuthority('REPORT_VIEW')")
     @GetMapping("/models/{id}")
     fun detail(@PathVariable id: Long): ResponseEntity<DataModelDetailResponse> =
         ResponseEntity.ok(modelService.getModelDetail(id))
 
+    @PreAuthorize("hasAuthority('REPORT_EDIT')")
     @PostMapping("/models")
     fun create(
         @Valid @RequestBody request: DataModelCreateRequest,
@@ -37,6 +41,7 @@ class ModelController(
     ): ResponseEntity<DataModelResponse> =
         ResponseEntity.ok(modelService.createModel(getUserId(user), request))
 
+    @PreAuthorize("hasAuthority('REPORT_EDIT')")
     @PutMapping("/models/{id}")
     fun update(
         @PathVariable id: Long,
@@ -44,6 +49,7 @@ class ModelController(
     ): ResponseEntity<DataModelResponse> =
         ResponseEntity.ok(modelService.updateModel(id, request))
 
+    @PreAuthorize("hasAuthority('REPORT_EDIT')")
     @DeleteMapping("/models/{id}")
     fun delete(@PathVariable id: Long): ResponseEntity<Void> {
         modelService.deleteModel(id)
@@ -52,6 +58,7 @@ class ModelController(
 
     // ─── Tables ───
 
+    @PreAuthorize("hasAuthority('REPORT_EDIT')")
     @PostMapping("/models/{modelId}/tables")
     fun addTable(
         @PathVariable modelId: Long,
@@ -59,6 +66,7 @@ class ModelController(
     ): ResponseEntity<ModelTableResponse> =
         ResponseEntity.ok(modelService.addTable(modelId, request))
 
+    @PreAuthorize("hasAuthority('REPORT_EDIT')")
     @DeleteMapping("/tables/{tableId}")
     fun removeTable(@PathVariable tableId: Long): ResponseEntity<Void> {
         modelService.removeTable(tableId)
@@ -67,6 +75,7 @@ class ModelController(
 
     // ─── Fields ───
 
+    @PreAuthorize("hasAuthority('REPORT_EDIT')")
     @PostMapping("/tables/{tableId}/fields")
     fun addField(
         @PathVariable tableId: Long,
@@ -74,6 +83,7 @@ class ModelController(
     ): ResponseEntity<ModelFieldResponse> =
         ResponseEntity.ok(modelService.addField(tableId, request))
 
+    @PreAuthorize("hasAuthority('REPORT_EDIT')")
     @PutMapping("/fields/{fieldId}")
     fun updateField(
         @PathVariable fieldId: Long,
@@ -81,6 +91,7 @@ class ModelController(
     ): ResponseEntity<ModelFieldResponse> =
         ResponseEntity.ok(modelService.updateField(fieldId, request))
 
+    @PreAuthorize("hasAuthority('REPORT_EDIT')")
     @DeleteMapping("/fields/{fieldId}")
     fun removeField(@PathVariable fieldId: Long): ResponseEntity<Void> {
         modelService.removeField(fieldId)
@@ -89,6 +100,7 @@ class ModelController(
 
     // ─── Relationships ───
 
+    @PreAuthorize("hasAuthority('REPORT_EDIT')")
     @PostMapping("/models/{modelId}/relationships")
     fun addRelationship(
         @PathVariable modelId: Long,
@@ -96,6 +108,7 @@ class ModelController(
     ): ResponseEntity<ModelRelationshipResponse> =
         ResponseEntity.ok(modelService.addRelationship(modelId, request))
 
+    @PreAuthorize("hasAuthority('REPORT_EDIT')")
     @DeleteMapping("/relationships/{relId}")
     fun removeRelationship(@PathVariable relId: Long): ResponseEntity<Void> {
         modelService.removeRelationship(relId)
@@ -104,10 +117,12 @@ class ModelController(
 
     // ─── Export / Import ───
 
+    @PreAuthorize("hasAuthority('REPORT_VIEW')")
     @GetMapping("/models/{id}/export")
     fun exportModel(@PathVariable id: Long): ResponseEntity<ModelExportConfig> =
         ResponseEntity.ok(modelService.exportModel(id))
 
+    @PreAuthorize("hasAuthority('REPORT_EDIT')")
     @PostMapping("/models/import")
     fun importModel(
         @Valid @RequestBody request: ImportModelRequest,
@@ -117,6 +132,7 @@ class ModelController(
 
     // ─── Auto-Import ───
 
+    @PreAuthorize("hasAuthority('REPORT_EDIT')")
     @PostMapping("/models/{modelId}/auto-import")
     fun autoImport(
         @PathVariable modelId: Long,
@@ -126,6 +142,7 @@ class ModelController(
 
     // ─── Explore (query via model) ───
 
+    @PreAuthorize("hasAuthority('QUERY_EXECUTE')")
     @PostMapping("/explore")
     fun explore(
         @Valid @RequestBody request: ExploreRequest
