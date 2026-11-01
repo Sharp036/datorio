@@ -132,7 +132,7 @@ export default function Header() {
               <Logo className="w-10 h-10 flex-shrink-0" />
               <div>
                 <h3 className="text-lg font-semibold text-slate-800 dark:text-white">Datorio BI Platform</h3>
-                <p className="text-xs text-slate-400">{t('header.about_version', { version: '1.0' })}</p>
+                <p className="text-xs text-slate-400">{t('header.about_version', { version: __APP_VERSION__ })}</p>
               </div>
             </div>
             <div className="space-y-2 text-sm text-slate-600 dark:text-slate-400">

@@ -35,6 +35,33 @@ CREATE TABLE IF NOT EXISTS sample.sales (
 PARTITION BY toYYYYMM(sale_date)
 ORDER BY (sale_date, category, region);
 
+-- Results of the example Airflow DAG (examples/airflow): one row per run, filled when the run ends
+CREATE TABLE IF NOT EXISTS sample.job_runs (
+    run_id           String,
+    started_by       String,
+    region           String,
+    date_from        Date,
+    date_to          Date,
+    status           LowCardinality(String),
+    failed_step      String,
+    message          String,
+    orders           UInt64,
+    revenue          Float64,
+    previous_revenue Float64,
+    finished_at      DateTime
+) ENGINE = MergeTree()
+ORDER BY finished_at;
+
+-- Sales of a run by category, written by the example DAG
+CREATE TABLE IF NOT EXISTS sample.job_results (
+    run_id      String,
+    category    String,
+    orders      UInt64,
+    revenue     Float64,
+    top_product String
+) ENGINE = MergeTree()
+ORDER BY (run_id, category);
+
 -- Orders per day follow growth, season and weekday; the order id is the date and the order
 -- number of the day (20240101001). Goods are 15% off on 24-30 November, one order in eight gets 10% off.
 INSERT INTO sample.sales

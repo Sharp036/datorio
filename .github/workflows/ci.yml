@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:18-alpine
+        image: postgres:16-alpine
         env:
           POSTGRES_DB: datorio_test
           POSTGRES_USER: datorio
@@ -60,30 +60,23 @@ jobs:
           name: test-results
           path: backend/build/reports/tests/
 
-  # ── Sample data of the quick start ──
-  sample-data:
+  # ── Examples: sample data, the Airflow example DAG and the example reports ──
+  examples:
     runs-on: ubuntu-latest
+    env:
+      DATORIO_DEMO_STEP_SECONDS: 1
     steps:
       - uses: actions/checkout@v4
 
-      - name: Load docker/clickhouse/init.sql into the ClickHouse image of docker-compose.yml
-        run: |
-          image=$(grep -oE 'clickhouse/clickhouse-server:[^" ]+' docker-compose.yml)
-          docker run -d --name clickhouse "$image"
-          timeout 120 sh -c 'until docker exec clickhouse clickhouse-client -q "SELECT 1" >/dev/null 2>&1; do sleep 2; done'
-          docker exec -i clickhouse clickhouse-client --multiquery < docker/clickhouse/init.sql
-          docker exec -i clickhouse clickhouse-client --multiquery <<'SQL'
-          SELECT throwIf(count() < 30000 OR uniqExact(order_id) != count()
-                         OR min(sale_date) != '2024-01-01' OR max(sale_date) != '2025-12-31', 'unexpected sample.sales')
-          FROM sample.sales FORMAT Null;
-          SELECT throwIf(count() < 200000 OR min(event_date) != '2024-01-01' OR max(event_date) != '2025-12-31',
-                         'unexpected sample.page_views')
-          FROM sample.page_views FORMAT Null;
-          SELECT count() AS sales_rows, max(order_id) AS last_order_id, round(sum(total_amount)) AS revenue
-          FROM sample.sales FORMAT PrettyCompactMonoBlock;
-          SELECT count() AS page_view_rows, uniqExact(session_id) AS sessions, uniqExact(user_id) AS users
-          FROM sample.page_views FORMAT PrettyCompactMonoBlock;
-          SQL
+      - name: Start ClickHouse with the sample data and Airflow with the example DAG
+        run: docker compose -f docker-compose.yml -f examples/airflow/compose.yml up -d --wait --wait-timeout 600 clickhouse airflow
+
+      - name: Check the sample data, run the example DAG and every query of the example reports
+        run: python3 .github/scripts/check_examples.py
+
+      - name: Container logs
+        if: failure()
+        run: docker compose -f docker-compose.yml -f examples/airflow/compose.yml logs --tail 300 clickhouse airflow
 
   # ── Build & Push Docker Image ──
   build:

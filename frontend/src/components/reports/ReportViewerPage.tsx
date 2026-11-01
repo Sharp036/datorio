@@ -28,6 +28,9 @@ import LiveIndicator from './LiveIndicator'
 import { vizApi } from '@/api/visualization'
 import type { ContainerItem } from '@/api/visualization'
 import TabContainer from '@/components/interactive/TabContainer'
+import ErrorBoundary from '@/components/common/ErrorBoundary'
+import { useAuthStore } from '@/store/authStore'
+import { parseJson } from '@/utils/safeJson'
 
 type FilterPanelPosition = 'top' | 'bottom' | 'left' | 'right'
 
@@ -101,6 +104,9 @@ export default function ReportViewerPage() {
         setFilterPanelPosition(filterPanelLayout.position)
         setFilterPanelCollapsed(filterPanelLayout.collapsed)
         workspaceApi.trackView('REPORT', numericId).catch(() => {})
+        // Parameters in the address (a drill-down opened in a new tab, a navigation button, a shared link)
+        const fromUrl = Object.fromEntries(new URLSearchParams(window.location.search))
+        if (Object.keys(fromUrl).length > 0) setCurrentParams(fromUrl)
         setCurrentReportId(numericId)
         if (!initializedRef.current) {
           setNavStack([{ reportId: numericId, reportName: r.name, parameters: {}, label: r.name }])
@@ -111,6 +117,18 @@ export default function ReportViewerPage() {
       .finally(() => setLoading(false))
   }, [id, t])
 
+  // Cross-filters and open drill-replaces belong to one report: a new report starts clean
+  useEffect(() => {
+    useActionStore.getState().reset()
+    return () => { useActionStore.getState().reset() }
+  }, [currentReportId])
+
+  const loadContainers = useCallback(async (reportId: number) => {
+    const c = await vizApi.getContainers(reportId).catch(() => [] as ContainerItem[])
+    setContainers(c)
+    setActiveTabByContainer(Object.fromEntries(c.map(ct => [ct.id, ct.activeTab || 0])))
+  }, [])
+
   const loadDrillActions = useCallback(async (reportId: number) => {
     try {
       const actions = await drillApi.forReport(reportId)
@@ -120,23 +138,45 @@ export default function ReportViewerPage() {
     }
   }, [])
 
-  const renderWithParams = useCallback(async (paramsToUse: Record<string, unknown>, opts?: { drillTargetIds?: number[] }) => {
+  // With an open drill-replace, its target widgets get opts.drillParams (the drill values on top of
+  // paramsToUse) and the other widgets paramsToUse, so the source widget is not filtered by the drill.
+  // onlyDrillTargets renders the targets alone, when a drill opens: the other widgets keep their data.
+  const renderWithParams = useCallback(async (
+    paramsToUse: Record<string, unknown>,
+    opts?: { drillTargetIds?: number[]; drillParams?: Record<string, unknown>; onlyDrillTargets?: boolean },
+  ) => {
     const rId = currentReportId || (id ? report?.id || 0 : null)
     if (!rId) return
     log.render('renderWithParams', { reportId: rId, params: paramsToUse, drillTargetIds: opts?.drillTargetIds })
     setRendering(true)
     try {
+      const targetIds = opts?.drillTargetIds ?? []
+      const drillParams = opts?.drillParams ?? paramsToUse
+      let result: RenderReportResponse
       // Widget by widget when the loaded report is the one rendered (not yet after a drill to another report)
-      const result = report && report.id === rId
-        ? await reportApi.renderByWidget(rId, paramsToUse, report.widgets, t('reports.widget_failed_to_load'))
-        : await reportApi.render(rId, paramsToUse)
+      if (report && report.id === rId) {
+        const failedText = t('reports.widget_failed_to_load')
+        const targetSet = new Set(targetIds)
+        const isTarget = (w: Report['widgets'][number]) => targetSet.has((w.id ?? w.widgetId) as number)
+        const [others, targets] = await Promise.all([
+          opts?.onlyDrillTargets ? null : reportApi.renderByWidget(rId, paramsToUse, report.widgets.filter(w => !isTarget(w)), failedText),
+          targetIds.length > 0 ? reportApi.renderByWidget(rId, drillParams, report.widgets.filter(isTarget), failedText) : null,
+        ])
+        const byId = new Map([...(others?.widgets ?? []), ...(targets?.widgets ?? [])].map(w => [w.widgetId, w]))
+        const base = others ?? targets!
+        result = {
+          ...base,
+          widgets: report.widgets.map(w => byId.get((w.id ?? w.widgetId) as number)).filter((w): w is NonNullable<typeof w> => !!w),
+          executionMs: Math.max(others?.executionMs ?? 0, targets?.executionMs ?? 0),
+        }
+      } else {
+        result = await reportApi.render(rId, targetIds.length > 0 ? drillParams : paramsToUse)
+      }
       log.render('renderResult', { widgetCount: result.widgets.length, executionMs: result.executionMs })
-      // When rendering for a drill activation, only apply NEW data for the
-      // drill target widgets. Non-target widgets keep their previously-
-      // rendered data (cached in renderResult). This avoids the parent
-      // (source) widget being filtered by drill params in its WHERE clause.
-      const targetIds = opts?.drillTargetIds
-      if (targetIds && targetIds.length > 0) {
+      // Apply only the drill targets when they alone were rendered (a drill opened, or the whole report
+      // was rendered with the drill values because it is not rendered widget by widget). The other
+      // widgets keep their data, so the source widget is not filtered by the drill.
+      if (targetIds.length > 0 && (opts?.onlyDrillTargets || !(report && report.id === rId))) {
         setRenderResult(prev => {
           if (!prev) return result
           const targetSet = new Set(targetIds)
@@ -153,12 +193,15 @@ export default function ReportViewerPage() {
       } else {
         setRenderResult(result)
       }
-      await loadDrillActions(rId)
-      const widgetIds = result.widgets.map((w: any) => w.widgetId)
-      interactiveApi.getMeta(rId, widgetIds).then(meta => {
-        setInteractiveMeta(meta)
-        useActionStore.getState().setActions(meta.actions)
-      }).catch(() => {})
+      // A drill opening renders its targets only: the actions and the metadata of the report stay as they are
+      if (!opts?.onlyDrillTargets) {
+        await loadDrillActions(rId)
+        const widgetIds = result.widgets.map((w: any) => w.widgetId)
+        interactiveApi.getMeta(rId, widgetIds).then(meta => {
+          setInteractiveMeta(meta)
+          useActionStore.getState().setActions(meta.actions)
+        }).catch(() => {})
+      }
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
       toast.error(msg || t('reports.failed_to_render'))
@@ -174,14 +217,15 @@ export default function ReportViewerPage() {
     // Drill-replace may push additional param overrides on top of the user's
     // filter-panel values. The store is the source of truth for drill state.
     const drillStack = useActionStore.getState().drillReplaceStack
-    const effective = mergeDrillParams(finalParams, drillStack)
-    // When drill is active, only refresh data for drill target widgets;
-    // keep non-target widgets' cached data so source widgets don't get
-    // accidentally filtered by drill params.
-    const drillTargetIds = drillStack.length > 0
-      ? [...new Set(drillStack.flatMap(e => e.targetWidgetIds))]
-      : undefined
-    await renderWithParams(effective, drillTargetIds ? { drillTargetIds } : undefined)
+    if (drillStack.length === 0) {
+      await renderWithParams(finalParams)
+      return
+    }
+    // An open drill keeps its values for its target widgets; the other widgets get the new values too
+    await renderWithParams(finalParams, {
+      drillTargetIds: [...new Set(drillStack.flatMap(e => e.targetWidgetIds))],
+      drillParams: mergeDrillParams(finalParams, drillStack),
+    })
   }, [currentParams, renderWithParams])
 
   useEffect(() => {
@@ -193,7 +237,7 @@ export default function ReportViewerPage() {
   const applyClickParams = useCallback((chartConfig: string | undefined, row: Record<string, unknown>) => {
     let mappings: Array<{ column?: string; param?: string }> = []
     try {
-      const cfg = JSON.parse(chartConfig || '{}') as { clickParams?: Array<{ column?: string; param?: string }> }
+      const cfg = parseJson(chartConfig, {}) as { clickParams?: Array<{ column?: string; param?: string }> }
       mappings = Array.isArray(cfg.clickParams) ? cfg.clickParams : []
     } catch { return }
     const overrides: Record<string, unknown> = {}
@@ -245,6 +289,7 @@ export default function ReportViewerPage() {
 
       const newReport = await reportApi.get(navResult.targetReportId)
       setReport(newReport)
+      await loadContainers(newReport.id)
       const filterPanelLayout = getFilterPanelLayout(newReport.layout)
       setFilterPanelPosition(filterPanelLayout.position)
       setFilterPanelCollapsed(filterPanelLayout.collapsed)
@@ -266,6 +311,7 @@ export default function ReportViewerPage() {
     try {
       const newReport = await reportApi.get(entry.reportId)
       setReport(newReport)
+      await loadContainers(newReport.id)
       const filterPanelLayout = getFilterPanelLayout(newReport.layout)
       setFilterPanelPosition(filterPanelLayout.position)
       setFilterPanelCollapsed(filterPanelLayout.collapsed)
@@ -295,6 +341,40 @@ export default function ReportViewerPage() {
     await renderWithParams(nextParams)
   }, [currentParams, renderWithParams])
 
+  // ── Visibility rules of a widget: all active rules must pass ───────────────────
+  const userRoles = useAuthStore(s => s.user?.roles ?? [])
+  const visibilityRulesPass = useCallback((widgetId: number) => {
+    const rules = (interactiveMeta?.visibilityRules?.[widgetId] || []).filter(r => r.isActive)
+    return rules.every(rule => {
+      switch (rule.ruleType) {
+        case 'ALWAYS_HIDDEN': return false
+        case 'ROLE': {
+          // The rule names the roles that see the widget, separated by commas
+          const allowed = (rule.expectedValue || '').split(',').map(r => r.trim()).filter(Boolean)
+          return allowed.length === 0 || allowed.some(r => userRoles.includes(r))
+        }
+        case 'PARAMETER': {
+          const raw = rule.parameterName ? currentParams[rule.parameterName] : undefined
+          const value = raw === undefined || raw === null ? '' : String(raw)
+          const expected = rule.expectedValue ?? ''
+          const list = expected.split(',').map(v => v.trim())
+          switch (rule.operator) {
+            case 'EQ': return value === expected
+            case 'NEQ': return value !== expected
+            case 'GT': return Number(value) > Number(expected)
+            case 'LT': return Number(value) < Number(expected)
+            case 'IN': return list.includes(value)
+            case 'NOT_IN': return !list.includes(value)
+            case 'IS_SET': return value.trim() !== ''
+            case 'IS_NOT_SET': return value.trim() === ''
+            default: return true
+          }
+        }
+        default: return true
+      }
+    })
+  }, [interactiveMeta, currentParams, userRoles])
+
   // ── Drill-replace visibility ─────────────────────────────────────────────────
   const drillReplaceStack = useActionStore(s => s.drillReplaceStack)
   const allActions = useActionStore(s => s.actions)
@@ -321,8 +401,9 @@ export default function ReportViewerPage() {
       if (drillVisibleTargets.has(widgetId)) return false
     }
     if (drillReplaceTargets.has(widgetId)) return true
-    return hiddenWidgetIds.includes(widgetId)
-  }, [hiddenWidgetIds, drillHiddenSources, drillVisibleTargets, drillReplaceTargets, drillPending])
+    if (hiddenWidgetIds.includes(widgetId)) return true
+    return !visibilityRulesPass(widgetId)
+  }, [hiddenWidgetIds, drillHiddenSources, drillVisibleTargets, drillReplaceTargets, drillPending, visibilityRulesPass])
 
   const getDrillEntryForTarget = useCallback((widgetId: number): DrillReplaceEntry | undefined => {
     return drillReplaceStack.find(e => e.targetWidgetIds.includes(widgetId))
@@ -365,7 +446,11 @@ export default function ReportViewerPage() {
         ),
       }
     })
-    handleRender().finally(() => setDrillPending(false))
+    renderWithParams(currentParams, {
+      drillTargetIds: [...targetIds],
+      drillParams: mergeDrillParams(currentParams, drillReplaceStack),
+      onlyDrillTargets: true,
+    }).finally(() => setDrillPending(false))
   }, [drillStackFingerprint]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Client-side cross-filter for drill-replace and other actions ─────────────
@@ -417,7 +502,7 @@ export default function ReportViewerPage() {
       const wid = w.id ?? w.widgetId
       if (wid === undefined || !visibleWidgetIds.has(wid)) continue
       try {
-        const mapping = JSON.parse(w.paramMapping || '{}') as Record<string, string>
+        const mapping = parseJson(w.paramMapping, {}) as Record<string, string>
         const vals = Object.values(mapping)
         if (vals.length > 0) {
           anyMapping = true
@@ -459,7 +544,7 @@ export default function ReportViewerPage() {
       const wid = w.id ?? w.widgetId
       if (wid === undefined || inContainers.has(wid)) continue // skip filters inside containers
       try {
-        const cc = JSON.parse(w.chartConfig || '{}') as Record<string, unknown>
+        const cc = parseJson(w.chartConfig, {}) as Record<string, unknown>
         const col = cc.filterColumn as string | undefined
         if (col && !usedParamNames.has(col)) ids.add(wid)
       } catch { /* ignore */ }
@@ -594,23 +679,25 @@ export default function ReportViewerPage() {
             <span>{t('reports.drill_to', { name: widgetDrillActions[0].targetReportName })}</span>
           </div>
         )}
-        <WidgetRenderer
-          widget={filtered}
-          drillActions={widgetDrillActions}
-          onDrillDown={hasDrill ? (data) => handleDrillDown(w.widgetId, data) : undefined}
-          layers={interactiveMeta?.chartLayers?.[w.widgetId] || []}
-          reportId={currentReportId || report?.id || 0}
-          onToggleWidgets={handleToggleWidgets}
-          onApplyFilter={handleApplyFilter}
-          onChartClick={(data) => {
-            applyClickParams(w.chartConfig, data)
-            useActionStore.getState().triggerAction(w.widgetId, 'CLICK', data)
-          }}
-          onWidgetDisplay={handleWidgetDisplay}
-          reportParams={currentParams}
-          onJobFinished={() => { handleRender() }}
-          buttonBlockedReason={buttonBlockedReason(w)}
-        />
+        <ErrorBoundary compact resetKey={filtered.data}>
+          <WidgetRenderer
+            widget={filtered}
+            drillActions={widgetDrillActions}
+            onDrillDown={hasDrill ? (data) => handleDrillDown(w.widgetId, data) : undefined}
+            layers={interactiveMeta?.chartLayers?.[w.widgetId] || []}
+            reportId={currentReportId || report?.id || 0}
+            onToggleWidgets={handleToggleWidgets}
+            onApplyFilter={handleApplyFilter}
+            onChartClick={(data) => {
+              applyClickParams(w.chartConfig, data)
+              useActionStore.getState().triggerAction(w.widgetId, 'CLICK', data)
+            }}
+            onWidgetDisplay={handleWidgetDisplay}
+            reportParams={currentParams}
+            onJobFinished={() => { handleRender() }}
+            buttonBlockedReason={buttonBlockedReason(w)}
+          />
+        </ErrorBoundary>
       </div>
     )
   }
@@ -850,7 +937,11 @@ export default function ReportViewerPage() {
             <RefreshCw className={`w-4 h-4 ${rendering ? 'animate-spin' : ''}`} /> {t('common.refresh')}
           </button>
           <button
-            onClick={() => { reportApi.createSnapshot(report?.id || 0); toast.success(t('reports.snapshot_created')) }}
+            onClick={() => {
+              reportApi.createSnapshot(report?.id || 0)
+                .then(() => toast.success(t('reports.snapshot_created')))
+                .catch(() => toast.error(t('common.error')))
+            }}
             className="btn-secondary text-xs py-1"
           >
             <Camera className="w-4 h-4" /> {t('reports.snapshot')}

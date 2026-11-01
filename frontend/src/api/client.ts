@@ -53,19 +53,20 @@ function handleSessionExpired() {
     import('@/store/authStore').then(({ useAuthStore }) => {
       useAuthStore.getState().logout()
     })
-    window.location.href = '/login'
+    const current = window.location.pathname + window.location.search
+    window.location.href = current.startsWith('/login') ? '/login' : '/login?next=' + encodeURIComponent(current)
     isLoggingOut = false
   }, 1500)
   return Promise.reject(SESSION_EXPIRED)
 }
 
-// Response: auto-refresh on 401/403, then redirect to login
+// Response: auto-refresh on 401, then redirect to login; 403 is a missing permission, not an expired session
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const original = error.config
     const status = error.response?.status
-    if ((status === 401 || status === 403) && !original._retry) {
+    if (status === 401 && !original._retry) {
       original._retry = true
       const refreshToken = localStorage.getItem('refreshToken')
       if (refreshToken) {

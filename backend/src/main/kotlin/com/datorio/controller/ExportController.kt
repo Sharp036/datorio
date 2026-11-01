@@ -3,6 +3,8 @@ package com.datorio.controller
 import com.datorio.model.dto.*
 import com.datorio.service.ExportService
 import com.datorio.service.EmailService
+import com.datorio.repository.UserRepository
+import com.datorio.service.ObjectPermissionService
 import org.springframework.http.*
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.Authentication
@@ -12,8 +14,16 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/export")
 class ExportController(
     private val exportService: ExportService,
-    private val emailService: EmailService
+    private val emailService: EmailService,
+    private val userRepository: UserRepository,
+    private val objectPermissionService: ObjectPermissionService
 ) {
+    /** Same rule as opening the report: editors and admins export every report, others the ones shared with them. */
+    private fun canOpen(reportId: Long, auth: Authentication): Boolean {
+        if (auth.authorities.any { it.authority in listOf("REPORT_EDIT", "SYSTEM_ADMIN") }) return true
+        val userId = userRepository.findByUsername(auth.name).map { it.id }.orElse(0L)
+        return objectPermissionService.canAccess("REPORT", reportId, userId)
+    }
 
     /**
      * Export report directly (streaming download).
@@ -25,6 +35,7 @@ class ExportController(
         @RequestBody request: ExportRequest,
         auth: Authentication
     ): ResponseEntity<ByteArray> {
+        if (!canOpen(reportId, auth)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
         val (bytes, filename) = exportService.exportReport(reportId, request, auth.name)
 
         val contentType = when (request.format.uppercase()) {
@@ -51,6 +62,7 @@ class ExportController(
         @RequestBody request: ExportRequest,
         auth: Authentication
     ): ResponseEntity<ExportStatusResponse> {
+        if (!canOpen(reportId, auth)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
         return ResponseEntity.ok(exportService.exportAndSave(reportId, request, auth.name))
     }
 
@@ -81,6 +93,7 @@ class ExportController(
         @RequestBody request: EmailDeliveryRequest,
         auth: Authentication
     ): ResponseEntity<EmailDeliveryResponse> {
+        if (!canOpen(reportId, auth)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
         val emailRequest = request.copy(reportId = reportId)
         return ResponseEntity.ok(emailService.sendReportEmail(emailRequest, auth.name))
     }

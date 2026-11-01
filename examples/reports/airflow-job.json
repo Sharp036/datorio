@@ -1,0 +1,190 @@
+{
+  "formatVersion": 2,
+  "name": "Airflow job example",
+  "description": "A button starts the Apache Airflow DAG datorio_demo_sales_summary with the parameters of the report, shows the progress of the run and refreshes the report with its result.",
+  "reportType": "STANDARD",
+  "layout": "{\"filterPanel\": {\"position\": \"left\", \"collapsed\": false}}",
+  "settings": "{}",
+  "category": "Examples",
+  "parameters": [
+    {
+      "name": "region",
+      "label": "Region",
+      "paramType": "SELECT",
+      "defaultValue": "All",
+      "isRequired": true,
+      "sortOrder": 0,
+      "config": "{}"
+    },
+    {
+      "name": "date_from",
+      "label": "From",
+      "paramType": "DATE",
+      "defaultValue": "2025-01-01",
+      "isRequired": true,
+      "sortOrder": 1,
+      "config": "{}"
+    },
+    {
+      "name": "date_to",
+      "label": "To",
+      "paramType": "DATE",
+      "defaultValue": "2025-12-31",
+      "isRequired": true,
+      "sortOrder": 2,
+      "config": "{}"
+    },
+    {
+      "name": "fail_at_step",
+      "label": "Fail at step (0 = no error)",
+      "paramType": "SELECT",
+      "defaultValue": "0",
+      "isRequired": true,
+      "sortOrder": 3,
+      "config": "{}"
+    },
+    {
+      "name": "run_id",
+      "label": "Run shown below (click a row in \"Job runs\"; empty = the latest successful run)",
+      "paramType": "STRING",
+      "defaultValue": null,
+      "isRequired": false,
+      "sortOrder": 4,
+      "config": "{}"
+    }
+  ],
+  "widgets": [
+    {
+      "widgetType": "TEXT",
+      "title": null,
+      "body": "<p style=\"margin:0;font-size:13px;color:#475569;\"><b>How it works.</b> The button sends the region, the period and \"Fail at step\" applied on the left panel to the Airflow DAG <code>datorio_demo_sales_summary</code> as its run configuration, together with your user name. The progress bar under the button shows the current step of the run and the elapsed time. When the run is over, the report refreshes: the run appears in \"Job runs\" and its result is shown below. Set \"Fail at step\" to 1-4 and press \"Apply\" to see how a failed run looks. The example needs the Airflow container from <code>examples/airflow/compose.yml</code>; its UI is on port 8088 (user datorio, password datorio).</p>",
+      "rawSql": null,
+      "chartConfig": "{}",
+      "position": "{\"x\": 0, \"y\": 0, \"w\": 18, \"h\": 3}",
+      "style": "{}",
+      "paramMapping": "{\"none\": \"none\"}",
+      "sortOrder": 0,
+      "isVisible": true
+    },
+    {
+      "widgetType": "BUTTON",
+      "title": "Start the job",
+      "body": null,
+      "rawSql": null,
+      "chartConfig": "{\"buttonType\": \"RUN_JOB\", \"label\": \"Start the job\", \"color\": \"green\", \"size\": \"large\", \"jobId\": \"datorio_demo_sales_summary\", \"jobParams\": [\"region\", \"date_from\", \"date_to\", \"fail_at_step\"], \"jobUserParam\": \"started_by\", \"confirmText\": \"Start the Airflow DAG datorio_demo_sales_summary with the region, period and \\\"Fail at step\\\" applied on the panel?\"}",
+      "position": "{\"x\": 18, \"y\": 0, \"w\": 6, \"h\": 3}",
+      "style": "{}",
+      "paramMapping": "{\"region\": \"region\", \"date_from\": \"date_from\", \"date_to\": \"date_to\", \"fail_at_step\": \"fail_at_step\"}",
+      "sortOrder": 1,
+      "isVisible": true
+    },
+    {
+      "widgetType": "TABLE",
+      "title": "Job runs",
+      "body": null,
+      "rawSql": "SELECT\n    formatDateTime(finished_at, '%Y-%m-%d %H:%i:%S') AS `Finished, UTC`,\n    run_id AS `Run`,\n    started_by AS `Started by`,\n    region AS `Region`,\n    concat(toString(date_from), ' - ', toString(date_to)) AS `Period`,\n    status AS `Status`,\n    failed_step AS `Failed step`,\n    message AS `Message`,\n    orders AS `Orders`,\n    revenue AS `Revenue`\nFROM sample.job_runs\nORDER BY finished_at DESC\nLIMIT 20",
+      "chartConfig": "{\"tableDensity\": \"compact\", \"tablePageSize\": 10, \"rowColorBy\": \"Status\", \"rowColorMode\": \"cell\", \"rowColors\": {\"success\": \"#dcfce7\", \"failed\": \"#fee2e2\"}, \"clickParams\": [{\"column\": \"Run\", \"param\": \"run_id\"}], \"description\": \"Click a row to show the result of that run below.\"}",
+      "position": "{\"x\": 0, \"y\": 3, \"w\": 24, \"h\": 5}",
+      "style": "{}",
+      "paramMapping": "{\"none\": \"none\"}",
+      "sortOrder": 2,
+      "isVisible": true
+    },
+    {
+      "widgetType": "KPI",
+      "title": "Revenue of the run",
+      "body": null,
+      "rawSql": "WITH chosen AS\n(\n    SELECT if(:run_id = '', (\n        SELECT argMax(run_id, finished_at)\n        FROM sample.job_runs\n        WHERE status = 'success'\n    ), :run_id) AS c_run_id\n)\nSELECT\n    revenue AS `Revenue`,\n    if(previous_revenue = 0, NULL, round((toFloat64(revenue) - toFloat64(previous_revenue)) / toFloat64(previous_revenue) * 100, 1)) AS `Change, %`,\n    concat(region, ', ', toString(date_from), ' - ', toString(date_to)) AS `Run`\nFROM sample.job_runs\nWHERE run_id IN (SELECT c_run_id FROM chosen)\n  AND status = 'success'",
+      "chartConfig": "{\"valueColumn\": \"Revenue\", \"deltaColumn\": \"Change, %\", \"labelColumn\": \"Run\", \"format\": \"currency\", \"decimals\": 0, \"currency\": \"USD\"}",
+      "position": "{\"x\": 0, \"y\": 8, \"w\": 6, \"h\": 3}",
+      "style": "{}",
+      "paramMapping": "{\"run_id\": \"run_id\"}",
+      "sortOrder": 3,
+      "isVisible": true
+    },
+    {
+      "widgetType": "KPI",
+      "title": "Orders of the run",
+      "body": null,
+      "rawSql": "WITH chosen AS\n(\n    SELECT if(:run_id = '', (\n        SELECT argMax(run_id, finished_at)\n        FROM sample.job_runs\n        WHERE status = 'success'\n    ), :run_id) AS c_run_id\n)\nSELECT\n    orders AS `Orders`,\n    CAST(NULL, 'Nullable(Float64)') AS `Change, %`,\n    concat(region, ', ', toString(date_from), ' - ', toString(date_to)) AS `Run`\nFROM sample.job_runs\nWHERE run_id IN (SELECT c_run_id FROM chosen)\n  AND status = 'success'",
+      "chartConfig": "{\"valueColumn\": \"Orders\", \"deltaColumn\": \"Change, %\", \"labelColumn\": \"Run\", \"format\": \"plain\", \"decimals\": 0}",
+      "position": "{\"x\": 6, \"y\": 8, \"w\": 6, \"h\": 3}",
+      "style": "{}",
+      "paramMapping": "{\"run_id\": \"run_id\"}",
+      "sortOrder": 4,
+      "isVisible": true
+    },
+    {
+      "widgetType": "TABLE",
+      "title": "Result by category",
+      "body": null,
+      "rawSql": "WITH chosen AS\n(\n    SELECT if(:run_id = '', (\n        SELECT argMax(run_id, finished_at)\n        FROM sample.job_runs\n        WHERE status = 'success'\n    ), :run_id) AS c_run_id\n)\nSELECT\n    category AS `Category`,\n    orders AS `Orders`,\n    revenue AS `Revenue`,\n    top_product AS `Top product`\nFROM sample.job_results\nWHERE run_id IN (SELECT c_run_id FROM chosen)\nORDER BY revenue DESC",
+      "chartConfig": "{\"tableDensity\": \"compact\"}",
+      "position": "{\"x\": 0, \"y\": 11, \"w\": 12, \"h\": 5}",
+      "style": "{}",
+      "paramMapping": "{\"run_id\": \"run_id\"}",
+      "sortOrder": 5,
+      "isVisible": true
+    },
+    {
+      "widgetType": "CHART",
+      "title": "Revenue by category in the run",
+      "body": null,
+      "rawSql": "WITH chosen AS\n(\n    SELECT if(:run_id = '', (\n        SELECT argMax(run_id, finished_at)\n        FROM sample.job_runs\n        WHERE status = 'success'\n    ), :run_id) AS c_run_id\n)\nSELECT\n    category AS `Category`,\n    revenue AS `Revenue`\nFROM sample.job_results\nWHERE run_id IN (SELECT c_run_id FROM chosen)\nORDER BY revenue DESC",
+      "chartConfig": "{\"type\": \"bar\", \"categoryField\": \"Category\", \"valueFields\": [\"Revenue\"], \"showLegend\": false, \"yAxisFormat\": \"currency\", \"yAxisCurrency\": \"USD\", \"yAxisDecimals\": 0}",
+      "position": "{\"x\": 12, \"y\": 8, \"w\": 12, \"h\": 8}",
+      "style": "{}",
+      "paramMapping": "{\"run_id\": \"run_id\"}",
+      "sortOrder": 6,
+      "isVisible": true
+    }
+  ],
+  "containers": [],
+  "parameterControls": [
+    {
+      "parameterName": "region",
+      "controlType": "DROPDOWN",
+      "datasourceId": null,
+      "optionsQuery": "SELECT ['All', 'Central', 'East', 'North', 'South', 'West'][o_order] AS o_value\nFROM\n(\n    SELECT arrayJoin(arrayEnumerate(['All', 'Central', 'East', 'North', 'South', 'West'])) AS o_order\n)\nORDER BY o_order",
+      "sliderMin": null,
+      "sliderMax": null,
+      "sliderStep": 1.0,
+      "config": "{}",
+      "sortOrder": 0
+    },
+    {
+      "parameterName": "date_from",
+      "controlType": "DATE_PICKER",
+      "datasourceId": null,
+      "optionsQuery": null,
+      "sliderMin": null,
+      "sliderMax": null,
+      "sliderStep": 1.0,
+      "config": "{}",
+      "sortOrder": 1
+    },
+    {
+      "parameterName": "date_to",
+      "controlType": "DATE_PICKER",
+      "datasourceId": null,
+      "optionsQuery": null,
+      "sliderMin": null,
+      "sliderMax": null,
+      "sliderStep": 1.0,
+      "config": "{}",
+      "sortOrder": 2
+    },
+    {
+      "parameterName": "fail_at_step",
+      "controlType": "DROPDOWN",
+      "datasourceId": null,
+      "optionsQuery": "SELECT ['0', '1', '2', '3', '4'][o_order] AS o_value\nFROM\n(\n    SELECT arrayJoin(arrayEnumerate(['0', '1', '2', '3', '4'])) AS o_order\n)\nORDER BY o_order",
+      "sliderMin": null,
+      "sliderMax": null,
+      "sliderStep": 1.0,
+      "config": "{}",
+      "sortOrder": 3
+    }
+  ],
+  "actions": []
+}

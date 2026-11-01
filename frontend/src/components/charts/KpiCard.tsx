@@ -183,7 +183,11 @@ export default function KpiCard({ data, title, chartConfig }: Props) {
   const valueCol = config.valueColumn || cols[0]
   const deltaCol = config.deltaColumn || cols[1]
   const value = row[valueCol]
-  const delta = deltaCol ? Number(row[deltaCol]) : undefined
+  // An empty or non-numeric delta (no previous period, a text column) is not shown, not as 0% or NaN%
+  const rawDelta = deltaCol ? row[deltaCol] : undefined
+  const delta = rawDelta === null || rawDelta === undefined || rawDelta === '' || !Number.isFinite(Number(rawDelta))
+    ? undefined
+    : Number(rawDelta)
   const prefix = config.prefix || ''
   const suffix = config.suffix || ''
 

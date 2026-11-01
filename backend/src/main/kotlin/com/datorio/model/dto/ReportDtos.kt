@@ -170,9 +170,11 @@ data class RenderedWidget(
 
 data class WidgetData(
     val columns: List<String>,
-    val rows: List<Map<String, Any?>>, 
+    val rows: List<Map<String, Any?>>,
     val rowCount: Int,
-    val executionMs: Long
+    val executionMs: Long,
+    // true when the query returned more rows than the widget limit and the rest were dropped
+    val truncated: Boolean = false
 )
 
 // ═══════════════════════════════════════════════

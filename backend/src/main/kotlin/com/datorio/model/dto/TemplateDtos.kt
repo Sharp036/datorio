@@ -42,7 +42,9 @@ data class ContainerExportConfig(
     val childWidgetSortOrders: List<List<Int>>,
     val tabNames: List<String> = emptyList(),
     val activeTab: Int = 0,
-    val sortOrder: Int = 0
+    val sortOrder: Int = 0,
+    val autoDistribute: Boolean = true,
+    val config: String = "{}"
 )
 
 data class ReportExportConfig(
@@ -56,7 +58,9 @@ data class ReportExportConfig(
     val parameters: List<ParameterExportConfig>,
     val widgets: List<WidgetExportConfig>,
     val containers: List<ContainerExportConfig> = emptyList(),
-    val parameterControls: List<ParameterControlExportConfig> = emptyList()
+    val parameterControls: List<ParameterControlExportConfig> = emptyList(),
+    val actions: List<ActionExportConfig> = emptyList(),
+    val overlays: List<OverlayExportConfig> = emptyList()
 )
 
 data class ParameterExportConfig(
@@ -108,7 +112,76 @@ data class WidgetExportConfig(
     val paramMapping: String,
     val sortOrder: Int,
     val isVisible: Boolean,
-    val layers: List<ChartLayerExportConfig> = emptyList()
+    val layers: List<ChartLayerExportConfig> = emptyList(),
+    val annotations: List<AnnotationExportConfig> = emptyList(),
+    val tooltip: TooltipExportConfig? = null,
+    val visibilityRules: List<VisibilityRuleExportConfig> = emptyList()
+)
+
+// A dashboard action (filter, highlight, drill-replace, URL). Widgets are referenced by sortOrder:
+// targetWidgetSortOrders keeps the target list syntax ("3,5", "*", "-4"). Actions that open another
+// report (NAVIGATE) are not exported: the target is a report of the source installation.
+data class ActionExportConfig(
+    val name: String,
+    val actionType: String,
+    val triggerType: String,
+    val sourceWidgetSortOrder: Int? = null,
+    val targetWidgetSortOrders: String? = null,
+    val sourceField: String? = null,
+    val targetField: String? = null,
+    val urlTemplate: String? = null,
+    val config: String = "{}"
+)
+
+data class AnnotationExportConfig(
+    val annotationType: String,
+    val axis: String,
+    val value: Double?,
+    val valueEnd: Double?,
+    val label: String?,
+    val color: String?,
+    val lineStyle: String?,
+    val lineWidth: Double?,
+    val opacity: Double?,
+    val fillColor: String?,
+    val fillOpacity: Double?,
+    val position: String?,
+    val fontSize: Int?,
+    val isVisible: Boolean = true,
+    val sortOrder: Int = 0,
+    val config: String = "{}"
+)
+
+data class TooltipExportConfig(
+    val isEnabled: Boolean = true,
+    val showTitle: Boolean = true,
+    val titleField: String? = null,
+    val fields: List<TooltipFieldDef> = emptyList(),
+    val showSparkline: Boolean = false,
+    val sparklineField: String? = null,
+    val htmlTemplate: String? = null,
+    val config: String = "{}"
+)
+
+data class VisibilityRuleExportConfig(
+    val ruleType: String,
+    val parameterName: String?,
+    val operator: String,
+    val expectedValue: String?
+)
+
+data class OverlayExportConfig(
+    val overlayType: String,
+    val content: String?,
+    val positionX: Int,
+    val positionY: Int,
+    val width: Int,
+    val height: Int,
+    val opacity: Double,
+    val zIndex: Int,
+    val linkUrl: String?,
+    val isVisible: Boolean = true,
+    val style: String = "{}"
 )
 
 data class ImportReportRequest(

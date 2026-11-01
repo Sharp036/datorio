@@ -40,3 +40,6 @@ Thumbs.db
 nul
 
 backend/bin/
+
+# Python (examples)
+__pycache__/

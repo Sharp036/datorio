@@ -86,23 +86,25 @@ AIRFLOW_ALLOWED_DAGS=example_dag_id
 
 `AIRFLOW_*` configure the RUN_JOB report buttons, which start an Airflow DAG with the
 report parameters through the Airflow 3 REST API (`POST /auth/token`, then
-`POST /api/v2/dags/{dag_id}/dagRuns`):
+`POST /api/v2/dags/{dag_id}/dagRuns`; the progress bar reads `GET /api/v2/dags/{dag_id}/dagRuns/{run_id}`
+and its `taskInstances`):
 
 - `AIRFLOW_API_URL` - the Airflow API server address, the same as `AIRFLOW__API__BASE_URL`
   of Airflow; it must be reachable from the `datorio` container.
 - `AIRFLOW_API_USER`, `AIRFLOW_API_PASSWORD` - a service account of Airflow whose role may
-  create DAG runs (the `User` role of the FAB auth manager is enough).
+  create DAG runs and read DAG runs and task instances (the `User` role of the FAB auth manager
+  is enough; a custom role needs `DAG Runs: create, read` and `Task Instances: read`).
 - `AIRFLOW_ALLOWED_DAGS` - comma-separated DAG ids that the buttons may start; a button with
   any other DAG id is refused before Airflow is called.
 
 The values are read at startup: after changing them, recreate the container
-(`docker-compose -f docker-compose.prod.yml up -d`, or rerun the CI deploy job).
+(`docker compose -f docker-compose.prod.yml up -d`, or rerun the CI deploy job).
 
 ### 2. Start the application
 
 ```bash
 cd /opt/bi-platform
-docker-compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml up -d
 ```
 
 The application will be available on port `8090`.
@@ -114,7 +116,9 @@ Flyway runs database migrations automatically on startup.
 
 Datorio must be proxied through nginx (or another reverse proxy) with SSL.
 
-Config file location inside the container: `/etc/nginx/nginx.conf`
+The nginx inside the container serves the frontend and proxies `/api/`; its config is
+`/etc/nginx/http.d/default.conf` (source: `docker/nginx/frontend.conf`). The server block below is for
+the reverse proxy in front of the container.
 
 ### nginx server block for Datorio
 
@@ -203,15 +207,15 @@ exposed to untrusted users without OS-level containment. Add the following to th
     mem_limit: 2g                 # hard cgroup memory cap (compose v2: deploy.resources.limits.memory)
     memswap_limit: 2g             # forbid swap escape
     pids_limit: 512               # cap thread/process explosion
-    read_only: true               # read-only root filesystem
-    user: "1000:1000"             # non-root
     cap_drop:
       - ALL
     security_opt:
       - no-new-privileges:true
-    tmpfs:
-      - /tmp                      # writable scratch only where the app needs it
 ```
+
+The image starts nginx and Java as root and nginx writes under `/var/lib/nginx`, `/var/log/nginx` and
+`/run/nginx`, so `read_only: true` and `user:` are not supported yet; running the container in a rootless
+Docker or Podman gives the same effect.
 
 Network egress: the script sandbox already blocks sockets, but as defense in
 depth the container should have **no outbound network access** except to its
@@ -252,13 +256,12 @@ Switch the runtime to Oracle GraalVM and add the `truffle-enterprise` dependency
 
 ## CI/CD
 
-GitLab CI builds the Docker image on every push to `main` and deploys it to the server.
+GitHub Actions (`.github/workflows/ci.yml`) runs the tests and the example checks on every pull request
+and publishes the image `ghcr.io/datorio-bi/datorio:latest` on every push to `main`.
 
-Pipeline stages:
-1. `build` — builds the image and pushes to Harbor registry
-2. `deploy` — SSH to the server, pulls the new image, restarts the container via `docker-compose.prod.yml`
-
-The pipeline is defined in `.gitlab-ci.yml`.
+`.gitlab-ci.yml` is an example of a self-hosted pipeline: it builds the image, pushes it to a private
+registry and restarts the container on a server over SSH with `docker-compose.prod.yml`. Adjust the
+registry, the runner tag and the paths before using it.
 
 The image installs nginx from the Alpine package repository. If the build host cannot reach
 `dl-cdn.alpinelinux.org`, pass a mirror as a build argument:
@@ -361,6 +364,16 @@ if result["status"] == "error":
 | `EMAIL_FROM` | Sender address of report emails | `noreply@datorio.local` |
 | `SMTP_USE_TLS` | Use STARTTLS | `true` |
 | `EMBED_BASE_URL` | Public address put in front of embed links, e.g. `https://bi.example.com`; empty gives links relative to the current site | empty |
+| `AIRFLOW_API_URL` | Airflow 3 API server for the Start a job buttons; empty disables the buttons | empty |
+| `AIRFLOW_API_USER`, `AIRFLOW_API_PASSWORD` | Airflow service account | empty |
+| `AIRFLOW_ALLOWED_DAGS` | Comma-separated DAG ids the buttons may start | empty |
+| `DATASOURCE_ENCRYPTION_KEY` | Key for the data source passwords stored in the metadata database; `JWT_SECRET` when empty. Changing it means entering the passwords again | empty |
+| `REGISTRATION_ENABLED` | `true` lets anyone create a VIEWER account through `POST /api/auth/register` | `false` |
+| `QUERY_TIMEOUT_SECONDS` | A widget or console query running longer is cancelled | `120` |
+| `LOG_LEVEL` | Log level of the application (`LOG_LEVEL_SQL` for the SQL of the metadata database) | `INFO` |
+| `SERVER_PORT` | Port of the Java process inside the container (nginx proxies 8080 to it) | `8080`, `8081` in the image |
+
+Times: report schedules (five-field cron, for example `0 9 * * 1-5`) and the timestamps of job runs are in UTC.
 
 A variable takes effect only when it reaches the `datorio` container: add the ones you set to the
 `environment` section of the service in your compose file (the bundled `docker-compose.yml` passes the Airflow, email, embed and export variables from `.env`).

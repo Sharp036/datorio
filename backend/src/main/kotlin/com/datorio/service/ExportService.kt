@@ -182,7 +182,8 @@ class ExportService(
             }
         }
 
-        return sb.toString().toByteArray(Charsets.UTF_8)
+        // The byte order mark makes Excel read the file as UTF-8
+        return ("\uFEFF" + sb.toString()).toByteArray(Charsets.UTF_8)
     }
 
     // ── Excel Export ──
@@ -204,10 +205,16 @@ class ExportService(
         }
 
         if (request.sheetPerWidget && widgets.size > 1) {
-            // One sheet per widget
+            // One sheet per widget; two widgets with one title get numbered sheets
+            val usedNames = mutableSetOf<String>()
             for (widget in widgets) {
                 val data = widget.data ?: continue
-                val sheetName = sanitizeSheetName(widget.title ?: "Widget ${widget.widgetId}")
+                var sheetName = sanitizeSheetName(widget.title ?: "Widget ${widget.widgetId}")
+                var n = 2
+                while (!usedNames.add(sheetName.lowercase())) {
+                    sheetName = sanitizeSheetName(widget.title ?: "Widget ${widget.widgetId}").take(28) + " $n"
+                    n++
+                }
                 val sheet = workbook.createSheet(sheetName)
                 writeWidgetToSheet(sheet, data, headerStyle, request.includeHeaders)
             }
@@ -262,10 +269,13 @@ class ExportService(
             data.columns.forEachIndexed { colIdx, col ->
                 val cell = excelRow.createCell(colIdx)
                 val value = row[col]
-                when (value) {
-                    null -> cell.setBlank()
-                    is Number -> cell.setCellValue(value.toDouble())
-                    is Boolean -> cell.setCellValue(value)
+                // Values arrive as text from the drivers; a number keeps its type in the sheet
+                val number = (value as? String)?.takeIf { NUMBER.matches(it) }?.toDoubleOrNull()
+                when {
+                    value == null -> cell.setBlank()
+                    value is Number -> cell.setCellValue(value.toDouble())
+                    value is Boolean -> cell.setCellValue(value)
+                    number != null -> cell.setCellValue(number)
                     else -> cell.setCellValue(value.toString())
                 }
             }
@@ -293,5 +303,9 @@ class ExportService(
 
     private fun sanitizeSheetName(name: String): String {
         return name.replace(Regex("[\\[\\]\\\\/*?:]"), "_").take(31)
+    }
+
+    companion object {
+        private val NUMBER = Regex("-?\\d{1,15}(\\.\\d+)?")
     }
 }

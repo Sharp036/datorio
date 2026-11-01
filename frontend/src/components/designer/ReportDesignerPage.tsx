@@ -385,7 +385,6 @@ export default function ReportDesignerPage() {
           const resolved = c.tabGroups.map(g =>
             g.map(cid => clientIdToServerId.get(cid) ?? -1).filter(id => id !== -1)
           )
-          console.log('[Save] container', c.name, 'tabGroups resolved:', resolved)
           await vizApi.createContainer({
             reportId,
             containerType: c.containerType,

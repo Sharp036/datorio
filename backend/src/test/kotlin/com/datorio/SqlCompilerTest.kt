@@ -315,5 +315,45 @@ class SqlCompilerTest {
             assertTrue(resolved.contains("100"))
             assertFalse(resolved.contains("'100'"))
         }
+
+        @Test
+        fun `a PostgreSQL cast is not a parameter`() {
+            val sql = "SELECT sum(amount)::numeric AS s FROM t WHERE d >= :from::date"
+            assertEquals(listOf("from"), resolver.extractParameterNames(sql))
+            val resolved = resolver.resolve(sql, mapOf("from" to "2024-01-01"))
+            assertEquals("SELECT sum(amount)::numeric AS s FROM t WHERE d >= '2024-01-01'::date", resolved)
+        }
+
+        @Test
+        fun `placeholders inside string literals and comments are left alone`() {
+            val sql = "SELECT 'time 10:30' AS t, \"a:b\" -- :note\nFROM x WHERE k = :k"
+            assertEquals(listOf("k"), resolver.extractParameterNames(sql))
+            val resolved = resolver.resolve(sql, mapOf("k" to "v"))
+            assertTrue(resolved.contains("'time 10:30'"))
+            assertTrue(resolved.contains("-- :note"))
+            assertTrue(resolved.endsWith("k = 'v'"))
+        }
+
+        @Test
+        fun `a list value becomes an IN list with or without its own parentheses`() {
+            val regions = listOf("North", "South")
+            assertEquals("WHERE r IN ('North', 'South')", resolver.resolve("WHERE r IN :r", mapOf("r" to regions)))
+            assertEquals("WHERE r IN ('North', 'South')", resolver.resolve("WHERE r IN (:r)", mapOf("r" to regions)))
+            assertEquals("WHERE 1=1", resolver.resolve("WHERE r IN (:r)", mapOf("r" to emptyList<String>())))
+        }
+
+        @Test
+        fun `a missing value removes the first condition and a qualified one`() {
+            assertEquals("SELECT * FROM t WHERE 1=1 AND x = 1",
+                resolver.resolve("SELECT * FROM t WHERE t.d >= :from AND x = 1", emptyMap()))
+            assertEquals("SELECT * FROM t WHERE x = 1 AND 1=1",
+                resolver.resolve("SELECT * FROM t WHERE x = 1 AND \"d\" <= :to", mapOf("to" to "")))
+        }
+
+        @Test
+        fun `ClickHouse literals escape quotes and backslashes`() {
+            val ch = ParameterResolver(DataSourceType.CLICKHOUSE)
+            assertEquals("WHERE p = 'C:\\\\it\\'s'", ch.resolve("WHERE p = :p", mapOf("p" to "C:\\it's")))
+        }
     }
 }

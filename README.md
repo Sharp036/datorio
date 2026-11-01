@@ -44,7 +44,7 @@ An import source describes how a file lands in a PostgreSQL or ClickHouse table:
 - Export to CSV, Excel and PDF, send a report by email, embed reports with tokens
 - Scheduled report snapshots (cron) and data alerts with a history of triggered and resolved events
 - Query caching, performance monitoring and a query advisor
-- Roles (ADMIN, EDITOR, VIEWER), object-level permissions and sharing, folders, favorites, tags and global search
+- Roles (ADMIN, EDITOR, VIEWER, IMPORTER), object-level permissions and sharing, folders, favorites, tags and global search
 - UI in 28 languages, light and dark themes
 - REST API with OpenAPI documentation (Swagger UI)
 
@@ -61,15 +61,43 @@ docker compose up -d
 
 Open http://localhost:8080 and sign in with `ADMIN_USER` / `ADMIN_PASSWORD` from `.env` (`admin` / `admin` by default).
 
-The stack also starts PostgreSQL for the application metadata and a ClickHouse server with two years (2024-2025) of generated sample data: orders in `sample.sales` and website visits in `sample.page_views`. To try the designer on them, add a ClickHouse data source with host `clickhouse`, port `8123`, user `default` and the password from `CH_PASSWORD`.
+The example values of `.env.example` are for trying the product on your own machine. Before anyone else can reach the installation, set a random `JWT_SECRET` (`openssl rand -base64 48`) and a real `ADMIN_PASSWORD`; the application logs a warning at startup while they are the example ones. Give the data sources read-only database accounts: a report author writes SQL that runs with them.
 
-To try a file import, open **Data Import**, press **Load from JSON**, choose [`examples/sales-import-source.json`](examples/sales-import-source.json), select the ClickHouse data source and save. Then upload [`examples/sales_2026_01.xlsx`](examples/sales_2026_01.xlsx) with this source on the **Upload** tab: it adds the January 2026 orders to `sample.sales`.
+The stack also starts PostgreSQL for the application metadata and a ClickHouse server with two years (2024-2025) of generated sample data: orders in `sample.sales` and website visits in `sample.page_views`.
+
+### Load the examples
+
+```bash
+python3 examples/load_examples.py
+```
+
+The script waits for Datorio and creates:
+
+- the ClickHouse data source "Sample ClickHouse" for the sample tables;
+- the reports **Sales overview** (KPIs against the previous year, revenue by month, region and category, top products) and **Website analytics** (sessions by week and device, traffic sources, landing pages, a purchase funnel, countries); in Sales overview, click a region or a category on its chart to open the region by month or the products of the category in place of the chart, and **Back** to return; click a row in a table to filter the whole report by it;
+- the report **Airflow job example**, see [Try it with the example](#try-it-with-the-example);
+- the import source "Sample sales from Excel": upload [`examples/sales_2026_01.xlsx`](examples/sales_2026_01.xlsx) with it on the **Upload** tab of **Data Import** to add the January 2026 orders to `sample.sales`, then set the period of **Sales overview** to end in 2026 to see them.
+
+It reads `ADMIN_USER`, `ADMIN_PASSWORD`, `APP_PORT` and `CH_PASSWORD` from `.env` and skips what already exists, so it can be run again.
 
 The API documentation is at http://localhost:8080/api/docs/swagger.
 
 A ready image of the `main` branch is published as `ghcr.io/datorio-bi/datorio:latest`.
 
 ## Connect Apache Airflow
+
+### Try it with the example
+
+[`examples/airflow/compose.yml`](examples/airflow/compose.yml) adds a single-container Airflow 3 with the DAG [`datorio_demo_sales_summary`](examples/airflow/dags/datorio_demo_sales_summary.py) and connects Datorio to it:
+
+```bash
+docker compose -f docker-compose.yml -f examples/airflow/compose.yml up -d
+python3 examples/load_examples.py
+```
+
+Open the report **Airflow job example** and press **Start the job**. The region and period from the parameter panel and your user name go to the DAG as its run configuration; the progress bar under the button shows each of the four steps and the elapsed time. The DAG summarizes the sales by category, compares them with the previous period and writes the result to ClickHouse; when the run is over, the report refreshes and shows it, and a click on a row of "Job runs" shows the result of that run. Set "Fail at step" to a step number to see how a failed run is reported. The Airflow UI is at http://localhost:8088 (user `datorio`, password `datorio`).
+
+### Connect your Airflow
 
 Set the Airflow connection in `.env` and run `docker compose up -d` again to recreate the container:
 
@@ -135,8 +163,8 @@ The response reports the rows imported and failed; `GET /api/import/logs/{id}/er
 ```bash
 docker compose up -d postgres clickhouse
 
-# backend
-./gradlew :backend:bootRun
+# backend: the compose file publishes PostgreSQL on 5433 with the password of .env
+DB_PORT=5433 DB_PASSWORD=datorio_secret ./gradlew :backend:bootRun
 
 # frontend
 cd frontend

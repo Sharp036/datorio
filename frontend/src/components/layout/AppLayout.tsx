@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Header from './Header'
+import ErrorBoundary from '@/components/common/ErrorBoundary'
 
 export default function AppLayout() {
   return (
@@ -9,7 +10,9 @@ export default function AppLayout() {
       <div className="flex flex-col flex-1 overflow-hidden">
         <Header />
         <main className="flex-1 overflow-y-auto p-6 bg-surface-50 dark:bg-dark-surface-0">
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
     </div>

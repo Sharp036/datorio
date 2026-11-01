@@ -3,6 +3,7 @@ package com.datorio.service
 import com.datorio.model.*
 import com.datorio.model.dto.*
 import com.datorio.repository.*
+import com.datorio.scheduling.CronExpressions
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import org.slf4j.LoggerFactory
@@ -15,7 +16,8 @@ class ReportScheduleService(
     private val scheduleRepo: ReportScheduleRepository,
     private val reportRepo: ReportRepository,
     private val renderService: ReportRenderService,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
+    private val emailService: EmailService
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -24,11 +26,9 @@ class ReportScheduleService(
         require(reportRepo.existsById(request.reportId)) {
             "Report not found: ${request.reportId}"
         }
-        validateCron(request.cronExpression)
-
         val schedule = ReportSchedule(
             reportId = request.reportId,
-            cronExpression = request.cronExpression,
+            cronExpression = validateCron(request.cronExpression),
             parameters = request.parameters,
             outputFormat = request.outputFormat,
             recipients = request.recipients,
@@ -59,10 +59,7 @@ class ReportScheduleService(
         val schedule = scheduleRepo.findById(id)
             .orElseThrow { IllegalArgumentException("Schedule not found: $id") }
 
-        request.cronExpression?.let {
-            validateCron(it)
-            schedule.cronExpression = it
-        }
+        request.cronExpression?.let { schedule.cronExpression = validateCron(it) }
         request.isActive?.let { schedule.isActive = it }
         request.parameters?.let { schedule.parameters = it }
         request.outputFormat?.let { schedule.outputFormat = it }
@@ -120,7 +117,8 @@ class ReportScheduleService(
         schedule.lastRunAt = Instant.now()
         if (snapshot.status == "SUCCESS") {
             schedule.lastStatus = ScheduleStatus.SUCCESS
-            schedule.lastError = null
+            schedule.lastError = sendToRecipients(schedule, params, username)
+            if (schedule.lastError != null) schedule.lastStatus = ScheduleStatus.ERROR
         } else {
             schedule.lastStatus = ScheduleStatus.ERROR
             schedule.lastError = snapshot.errorMessage
@@ -135,11 +133,25 @@ class ReportScheduleService(
 
     // ── Helpers ──
 
-    private fun validateCron(expression: String) {
-        val parts = expression.trim().split("\\s+".toRegex())
-        require(parts.size in 5..6) {
-            "Invalid cron expression '$expression': expected 5 or 6 fields (minute hour dayOfMonth month dayOfWeek [year])"
-        }
+    /** The recipients of the schedule get the report in its output format; returns the error text, if any. */
+    private fun sendToRecipients(schedule: ReportSchedule, params: Map<String, Any?>, username: String): String? {
+        val recipients: List<String> = try {
+            objectMapper.readValue(schedule.recipients)
+        } catch (_: Exception) { emptyList() }
+        if (recipients.isEmpty()) return null
+        val format = if (schedule.outputFormat == OutputFormat.JSON) "CSV" else schedule.outputFormat.name
+        val result = emailService.sendReportEmail(
+            EmailDeliveryRequest(reportId = schedule.reportId, recipients = recipients, format = format, parameters = params),
+            username
+        )
+        return if (result.success) null else result.message
+    }
+
+    /** Checks the expression and returns it in the stored five-field form. */
+    private fun validateCron(expression: String): String {
+        CronExpressions.parse(expression)
+        val parts = expression.trim().split(Regex("\\s+"))
+        return if (parts.size == 6 && parts[0] == "0") parts.drop(1).joinToString(" ") else parts.joinToString(" ")
     }
 
     private fun toResponse(s: ReportSchedule): ScheduleResponse {

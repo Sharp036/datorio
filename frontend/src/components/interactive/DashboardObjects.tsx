@@ -185,7 +185,7 @@ function formatPlaceholderValue(value: unknown, format?: string): string {
     case 'thousands':
       return hasNum ? `${(num / 1000).toFixed(1)}K` : String(value)
     case 'millions':
-      return hasNum ? `${(num / 1_000_000).toFixed(2)} млн` : String(value)
+      return hasNum ? `${(num / 1_000_000).toFixed(2)}M` : String(value)
     default:
       return hasNum ? num.toLocaleString() : String(value)
   }

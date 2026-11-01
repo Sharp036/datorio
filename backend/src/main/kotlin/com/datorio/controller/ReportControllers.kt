@@ -172,7 +172,8 @@ class ReportController(
 
     @GetMapping("/{id}/parameters")
     @PreAuthorize("hasAuthority('REPORT_VIEW')")
-    fun getParameters(@PathVariable id: Long): ResponseEntity<List<ReportParameterDto>> {
+    fun getParameters(@PathVariable id: Long, auth: Authentication): ResponseEntity<List<ReportParameterDto>> {
+        if (!canOpen(id, auth)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
         return ResponseEntity.ok(reportService.getParameters(id))
     }
 
@@ -190,7 +191,8 @@ class ReportController(
 
     @GetMapping("/{id}/widgets")
     @PreAuthorize("hasAuthority('REPORT_VIEW')")
-    fun getWidgets(@PathVariable id: Long): ResponseEntity<List<WidgetResponse>> {
+    fun getWidgets(@PathVariable id: Long, auth: Authentication): ResponseEntity<List<WidgetResponse>> {
+        if (!canOpen(id, auth)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
         return ResponseEntity.ok(reportService.getWidgets(id))
     }
 
@@ -241,6 +243,7 @@ class ReportController(
         @RequestBody(required = false) request: RenderReportRequest?,
         auth: Authentication
     ): ResponseEntity<RenderReportResponse> {
+        if (!canOpen(id, auth)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
         return ResponseEntity.ok(
             renderService.renderReport(id, request ?: RenderReportRequest(), getUsername(auth))
         )
@@ -276,20 +279,29 @@ class ReportController(
     fun listSnapshots(
         @PathVariable id: Long,
         @RequestParam(defaultValue = "0") page: Int,
-        @RequestParam(defaultValue = "20") size: Int
+        @RequestParam(defaultValue = "20") size: Int,
+        auth: Authentication
     ): ResponseEntity<List<SnapshotResponse>> {
+        if (!canOpen(id, auth)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
         return ResponseEntity.ok(renderService.listSnapshots(id, page, size))
     }
 
     @GetMapping("/{id}/snapshots/latest")
     @PreAuthorize("hasAuthority('REPORT_VIEW')")
-    fun getLatestSnapshot(@PathVariable id: Long): ResponseEntity<Any> {
+    fun getLatestSnapshot(@PathVariable id: Long, auth: Authentication): ResponseEntity<Any> {
+        if (!canOpen(id, auth)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
         val snapshot = renderService.getLatestSnapshot(id)
         return if (snapshot != null) ResponseEntity.ok(snapshot)
         else ResponseEntity.noContent().build()
     }
 
     // ── Helpers ──
+
+    /** Same rule as opening the report: editors and admins see every report, others the ones shared with them. */
+    private fun canOpen(reportId: Long, auth: Authentication): Boolean {
+        if (auth.authorities.any { it.authority in listOf("REPORT_EDIT", "SYSTEM_ADMIN") }) return true
+        return objectPermissionService.canAccess("REPORT", reportId, getUserId(auth))
+    }
 
     private fun getUsername(auth: Authentication): String {
         return auth.name

@@ -79,6 +79,8 @@ export interface RenderedWidget {
 export interface WidgetData {
   columns: string[]; rows: Record<string, unknown>[]
   rowCount: number; executionMs: number
+  // the query returned more rows than the widget limit
+  truncated?: boolean
 }
 
 // ── Dashboard ──

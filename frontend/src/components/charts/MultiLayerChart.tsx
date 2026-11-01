@@ -1112,7 +1112,7 @@ export default function MultiLayerChart({
               whiteSpace: 'nowrap',
             }}
           >
-            ↕ перетащить
+            {t('charts.drag_to_move')}
           </div>
         )}
       </div>

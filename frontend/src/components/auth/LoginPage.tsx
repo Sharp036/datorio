@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import Logo from '@/components/common/Logo'
 import { LogIn, Eye, EyeOff } from 'lucide-react'
@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const login = useAuthStore(s => s.login)
   const navigate = useNavigate()
+  const location = useLocation()
   const { t, i18n } = useTranslation()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -22,7 +23,10 @@ export default function LoginPage() {
     try {
       await login({ username, password })
       toast.success(t('auth.welcome_back'))
-      navigate('/')
+      // Back to the page that asked for the login: the route guard passes it in the state, the session expiry in ?next=
+      const next = (location.state as { from?: string } | null)?.from
+        || new URLSearchParams(location.search).get('next')
+      navigate(next && next.startsWith('/') && !next.startsWith('/login') ? next : '/', { replace: true })
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || t('auth.invalid_credentials')
       toast.error(msg)

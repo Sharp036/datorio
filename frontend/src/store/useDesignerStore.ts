@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import i18n from 'i18next'
 import type { ChartLayerItem } from '@/types'
+import { parseJson } from '@/utils/safeJson'
 
 export interface DesignerWidget {
   id: string                // temp client ID (negative or uuid)
@@ -174,10 +175,11 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
 
   loadReport: (data) => {
     const widgets: DesignerWidget[] = (data.widgets || []).map((w: Record<string, unknown>, i: number) => {
-      const pos = typeof w.position === 'string' ? JSON.parse(w.position as string) : (w.position || {})
-      const chart = typeof w.chartConfig === 'string' ? JSON.parse(w.chartConfig as string) : (w.chartConfig || {})
-      const style = typeof w.style === 'string' ? JSON.parse(w.style as string) : (w.style || {})
-      const pm = typeof w.paramMapping === 'string' ? JSON.parse(w.paramMapping as string) : (w.paramMapping || {})
+      // A broken JSON in one widget must not keep the designer from opening the report
+      const pos = parseJson(w.position, {}) as Record<string, number>
+      const chart = parseJson(w.chartConfig, {}) as Record<string, unknown>
+      const style = parseJson(w.style, {}) as Record<string, unknown>
+      const pm = parseJson(w.paramMapping, {}) as Record<string, string>
 
       // Legacy chart-type aliases. The bar/area variants used to be modelled
       // as separate chart types (horizontal_bar / stacked_bar / stacked_area)

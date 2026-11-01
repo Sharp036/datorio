@@ -1,0 +1,23 @@
+# Build context of the Dockerfile: sources only. Host build output and dependencies would
+# overwrite what the build stages install for Linux, and .env must not reach the image.
+.git
+.gradle
+.idea
+.vscode
+.claude
+build
+backend/build
+backend/bin
+backend/.gradle
+frontend/node_modules
+frontend/dist
+frontend/build
+frontend/*.tsbuildinfo
+.env
+*.env.local
+*.log
+hs_err_pid*
+replay_pid*
+temp
+docs
+examples

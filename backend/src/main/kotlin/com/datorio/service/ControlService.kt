@@ -4,6 +4,8 @@ import com.datorio.datasource.ConnectionManager
 import com.datorio.model.*
 import com.datorio.model.dto.*
 import com.datorio.repository.*
+import com.datorio.query.ReadOnlySql
+import com.datorio.query.compiler.ParameterResolver
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import org.slf4j.LoggerFactory
@@ -137,27 +139,7 @@ class ControlService(
         val ds = dataSourceRepository.findById(control.datasourceId!!)
             .orElseThrow { NoSuchElementException("DataSource not found: ${control.datasourceId}") }
 
-        var query = control.optionsQuery!!
-
-        // Substitute provided non-blank parent values
-        for ((paramName, paramVal) in parentValues) {
-            if (paramVal.isNotBlank()) {
-                query = query.replace(":$paramName", "'${paramVal.replace("'", "''")}'")
-            }
-        }
-        // For remaining unsubstituted :params: replace simple "AND col = :param" with "AND 1=1",
-        // then replace any leftover :param with '' (safe for parenthesized conditions)
-        val unsubstituted = Regex(":[a-zA-Z_]\\w*")
-        if (unsubstituted.containsMatchIn(query)) {
-            val remaining = unsubstituted.findAll(query).map { it.value.substring(1) }.toSet()
-            for (pName in remaining) {
-                query = query.replace(
-                    Regex("""(?i)\bAND\s+\w+\s*[=!<>]+\s*:${Regex.escape(pName)}\b"""),
-                    "AND 1=1"
-                )
-            }
-            query = query.replace(unsubstituted, "''")
-        }
+        val query = resolveOptionsQuery(ds, control.optionsQuery!!, parentValues)
 
         val threshold = 1000
         return try {
@@ -201,33 +183,19 @@ class ControlService(
         val ds = dataSourceRepository.findById(control.datasourceId!!)
             .orElseThrow { NoSuchElementException("DataSource not found: ${control.datasourceId}") }
 
-        // Substitute parent values in the base query before wrapping
-        var baseQuery = control.optionsQuery!!
-        for ((pName, pVal) in parentValues) {
-            if (pVal.isNotBlank()) {
-                baseQuery = baseQuery.replace(":$pName", "'${pVal.replace("'", "''")}'")
-            }
-        }
-        // Handle remaining unsubstituted :params safely
-        val unsubstituted = Regex(":[a-zA-Z_]\\w*")
-        if (unsubstituted.containsMatchIn(baseQuery)) {
-            val remaining = unsubstituted.findAll(baseQuery).map { it.value.substring(1) }.toSet()
-            for (pn in remaining) {
-                baseQuery = baseQuery.replace(
-                    Regex("""(?i)\bAND\s+\w+\s*[=!<>]+\s*:${Regex.escape(pn)}\b"""),
-                    "AND 1=1"
-                )
-            }
-            baseQuery = baseQuery.replace(unsubstituted, "''")
-        }
+        val baseQuery = resolveOptionsQuery(ds, control.optionsQuery!!, parentValues)
 
         // Sanitize inputs to prevent injection (column name must be a simple identifier)
         val safeCol = columnName.replace(Regex("[^A-Za-z0-9_]"), "")
-        val safeSearch = searchQuery.replace("'", "''")
+        val safeSearch = ParameterResolver(ds.type).resolve(":q", mapOf("q" to searchQuery))
+        val condition = when (ds.type) {
+            DataSourceType.CLICKHOUSE -> "positionCaseInsensitive(toString($safeCol), $safeSearch) > 0"
+            DataSourceType.POSTGRESQL -> "position(lower($safeSearch) in lower(CAST($safeCol AS TEXT))) > 0"
+        }
 
         val wrappedQuery = """
             SELECT $safeCol FROM ($baseQuery) AS _opts
-            WHERE positionCaseInsensitive(toString($safeCol), '$safeSearch') > 0
+            WHERE $condition
             LIMIT $limit
         """.trimIndent()
 
@@ -242,6 +210,14 @@ class ControlService(
             log.error("Failed to search options for parameter {}: {}", parameterName, e.message)
             ParameterOptionsResponse(parameterName, emptyList())
         }
+    }
+
+    // Parent values fill their placeholders; the other placeholders are removed as in widget queries.
+    // Only a query that reads data is run: the options query is stored by the report editor,
+    // but it is run on behalf of every viewer.
+    private fun resolveOptionsQuery(ds: DataSource, optionsQuery: String, parentValues: Map<String, String>): String {
+        ReadOnlySql.requireReadOnly(optionsQuery)
+        return ParameterResolver(ds.type).resolve(optionsQuery, parentValues)
     }
 
     // ═══════════════════════════════════════════

@@ -1,0 +1,264 @@
+{
+  "formatVersion": 2,
+  "name": "Sales overview",
+  "description": "Sales of a sample electronics store in 2024-2025: revenue, orders, categories, regions and products, compared with the same period a year earlier.",
+  "reportType": "STANDARD",
+  "layout": "{\"filterPanel\": {\"position\": \"left\", \"collapsed\": false}}",
+  "settings": "{}",
+  "category": "Examples",
+  "parameters": [
+    {
+      "name": "date_from",
+      "label": "From",
+      "paramType": "DATE",
+      "defaultValue": "2025-01-01",
+      "isRequired": true,
+      "sortOrder": 0,
+      "config": "{}"
+    },
+    {
+      "name": "date_to",
+      "label": "To",
+      "paramType": "DATE",
+      "defaultValue": "2025-12-31",
+      "isRequired": true,
+      "sortOrder": 1,
+      "config": "{}"
+    },
+    {
+      "name": "region",
+      "label": "Region",
+      "paramType": "SELECT",
+      "defaultValue": "All",
+      "isRequired": true,
+      "sortOrder": 2,
+      "config": "{}"
+    },
+    {
+      "name": "category",
+      "label": "Category",
+      "paramType": "SELECT",
+      "defaultValue": "All",
+      "isRequired": true,
+      "sortOrder": 3,
+      "config": "{}"
+    }
+  ],
+  "widgets": [
+    {
+      "widgetType": "TEXT",
+      "title": null,
+      "body": "<p style=\"margin:0;font-size:13px;color:#475569;\">Generated sales of a sample store, table <code>sample.sales</code>. Change the period, region and category on the left panel. Click a region bar or a category slice to open its details in place of the chart, and \"Back\" to return. Click a row in a table at the bottom to filter the dashboard by its category or region; set the filter back to All on the panel. The change is shown against the same period a year earlier.</p>",
+      "rawSql": null,
+      "chartConfig": "{}",
+      "position": "{\"x\": 0, \"y\": 0, \"w\": 24, \"h\": 1}",
+      "style": "{}",
+      "paramMapping": "{\"none\": \"none\"}",
+      "sortOrder": 0,
+      "isVisible": true
+    },
+    {
+      "widgetType": "KPI",
+      "title": "Revenue",
+      "body": null,
+      "rawSql": "SELECT\n    round(sumIf(total_amount, k_cur), 2) AS `Revenue`,\n    if(round(sumIf(total_amount, k_prev), 2) = 0, NULL, round((toFloat64(round(sumIf(total_amount, k_cur), 2)) - toFloat64(round(sumIf(total_amount, k_prev), 2))) / toFloat64(round(sumIf(total_amount, k_prev), 2)) * 100, 1)) AS `Change, %`,\n    'vs a year earlier' AS `Compared with`,\n    (\n        SELECT arrayStringConcat(arrayMap(v -> toString(v), groupArray(t_revenue)), ',')\n        FROM\n        (\n            SELECT toStartOfMonth(sale_date) AS t_month, round(sum(total_amount), 2) AS t_revenue\n            FROM sample.sales\n            WHERE sale_date BETWEEN toDate(:date_from) AND toDate(:date_to)\n              AND (:region = 'All' OR region = :region)\n              AND (:category = 'All' OR category = :category)\n            GROUP BY t_month\n            ORDER BY t_month\n        )\n    ) AS `Trend`\nFROM\n(\n    SELECT\n        total_amount,\n        quantity,\n        sale_date BETWEEN toDate(:date_from) AND toDate(:date_to) AS k_cur,\n        sale_date BETWEEN subtractYears(toDate(:date_from), 1) AND subtractYears(toDate(:date_to), 1) AS k_prev\n    FROM sample.sales\n    WHERE (:region = 'All' OR region = :region)\n      AND (:category = 'All' OR category = :category)\n)",
+      "chartConfig": "{\"valueColumn\": \"Revenue\", \"deltaColumn\": \"Change, %\", \"labelColumn\": \"Compared with\", \"format\": \"currency\", \"decimals\": 0, \"currency\": \"USD\", \"sparklineField\": \"Trend\"}",
+      "position": "{\"x\": 0, \"y\": 1, \"w\": 6, \"h\": 3}",
+      "style": "{}",
+      "paramMapping": "{\"date_from\": \"date_from\", \"date_to\": \"date_to\", \"region\": \"region\", \"category\": \"category\"}",
+      "sortOrder": 1,
+      "isVisible": true
+    },
+    {
+      "widgetType": "KPI",
+      "title": "Orders",
+      "body": null,
+      "rawSql": "SELECT\n    countIf(k_cur) AS `Orders`,\n    if(countIf(k_prev) = 0, NULL, round((toFloat64(countIf(k_cur)) - toFloat64(countIf(k_prev))) / toFloat64(countIf(k_prev)) * 100, 1)) AS `Change, %`,\n    'vs a year earlier' AS `Compared with`\nFROM\n(\n    SELECT\n        total_amount,\n        quantity,\n        sale_date BETWEEN toDate(:date_from) AND toDate(:date_to) AS k_cur,\n        sale_date BETWEEN subtractYears(toDate(:date_from), 1) AND subtractYears(toDate(:date_to), 1) AS k_prev\n    FROM sample.sales\n    WHERE (:region = 'All' OR region = :region)\n      AND (:category = 'All' OR category = :category)\n)",
+      "chartConfig": "{\"valueColumn\": \"Orders\", \"deltaColumn\": \"Change, %\", \"labelColumn\": \"Compared with\", \"format\": \"plain\", \"decimals\": 0}",
+      "position": "{\"x\": 6, \"y\": 1, \"w\": 6, \"h\": 3}",
+      "style": "{}",
+      "paramMapping": "{\"date_from\": \"date_from\", \"date_to\": \"date_to\", \"region\": \"region\", \"category\": \"category\"}",
+      "sortOrder": 2,
+      "isVisible": true
+    },
+    {
+      "widgetType": "KPI",
+      "title": "Average order",
+      "body": null,
+      "rawSql": "SELECT\n    round(sumIf(total_amount, k_cur) / greatest(countIf(k_cur), 1), 2) AS `Average order`,\n    if(round(sumIf(total_amount, k_prev) / greatest(countIf(k_prev), 1), 2) = 0, NULL, round((toFloat64(round(sumIf(total_amount, k_cur) / greatest(countIf(k_cur), 1), 2)) - toFloat64(round(sumIf(total_amount, k_prev) / greatest(countIf(k_prev), 1), 2))) / toFloat64(round(sumIf(total_amount, k_prev) / greatest(countIf(k_prev), 1), 2)) * 100, 1)) AS `Change, %`,\n    'vs a year earlier' AS `Compared with`\nFROM\n(\n    SELECT\n        total_amount,\n        quantity,\n        sale_date BETWEEN toDate(:date_from) AND toDate(:date_to) AS k_cur,\n        sale_date BETWEEN subtractYears(toDate(:date_from), 1) AND subtractYears(toDate(:date_to), 1) AS k_prev\n    FROM sample.sales\n    WHERE (:region = 'All' OR region = :region)\n      AND (:category = 'All' OR category = :category)\n)",
+      "chartConfig": "{\"valueColumn\": \"Average order\", \"deltaColumn\": \"Change, %\", \"labelColumn\": \"Compared with\", \"format\": \"currency\", \"decimals\": 2, \"currency\": \"USD\"}",
+      "position": "{\"x\": 12, \"y\": 1, \"w\": 6, \"h\": 3}",
+      "style": "{}",
+      "paramMapping": "{\"date_from\": \"date_from\", \"date_to\": \"date_to\", \"region\": \"region\", \"category\": \"category\"}",
+      "sortOrder": 3,
+      "isVisible": true
+    },
+    {
+      "widgetType": "KPI",
+      "title": "Units sold",
+      "body": null,
+      "rawSql": "SELECT\n    sumIf(quantity, k_cur) AS `Units sold`,\n    if(sumIf(quantity, k_prev) = 0, NULL, round((toFloat64(sumIf(quantity, k_cur)) - toFloat64(sumIf(quantity, k_prev))) / toFloat64(sumIf(quantity, k_prev)) * 100, 1)) AS `Change, %`,\n    'vs a year earlier' AS `Compared with`\nFROM\n(\n    SELECT\n        total_amount,\n        quantity,\n        sale_date BETWEEN toDate(:date_from) AND toDate(:date_to) AS k_cur,\n        sale_date BETWEEN subtractYears(toDate(:date_from), 1) AND subtractYears(toDate(:date_to), 1) AS k_prev\n    FROM sample.sales\n    WHERE (:region = 'All' OR region = :region)\n      AND (:category = 'All' OR category = :category)\n)",
+      "chartConfig": "{\"valueColumn\": \"Units sold\", \"deltaColumn\": \"Change, %\", \"labelColumn\": \"Compared with\", \"format\": \"plain\", \"decimals\": 0}",
+      "position": "{\"x\": 18, \"y\": 1, \"w\": 6, \"h\": 3}",
+      "style": "{}",
+      "paramMapping": "{\"date_from\": \"date_from\", \"date_to\": \"date_to\", \"region\": \"region\", \"category\": \"category\"}",
+      "sortOrder": 4,
+      "isVisible": true
+    },
+    {
+      "widgetType": "CHART",
+      "title": "Revenue by month and category",
+      "body": null,
+      "rawSql": "SELECT\n    formatDateTime(toStartOfMonth(sale_date), '%Y-%m') AS `Month`,\n    round(sumIf(total_amount, category = 'Electronics'), 2) AS `Electronics`,\n    round(sumIf(total_amount, category = 'Accessories'), 2) AS `Accessories`,\n    round(sumIf(total_amount, category = 'Home'), 2) AS `Home`,\n    round(sumIf(total_amount, category = 'Services'), 2) AS `Services`\nFROM sample.sales\nWHERE sale_date BETWEEN toDate(:date_from) AND toDate(:date_to)\n  AND (:region = 'All' OR region = :region)\n  AND (:category = 'All' OR category = :category)\nGROUP BY `Month`\nORDER BY `Month`",
+      "chartConfig": "{\"type\": \"bar\", \"stacked\": true, \"categoryField\": \"Month\", \"valueFields\": [\"Electronics\", \"Accessories\", \"Home\", \"Services\"], \"showLegend\": true, \"legendPosition\": \"bottom\", \"yAxisFormat\": \"currency\", \"yAxisCurrency\": \"USD\", \"yAxisDecimals\": 0}",
+      "position": "{\"x\": 0, \"y\": 4, \"w\": 24, \"h\": 7}",
+      "style": "{}",
+      "paramMapping": "{\"date_from\": \"date_from\", \"date_to\": \"date_to\", \"region\": \"region\", \"category\": \"category\"}",
+      "sortOrder": 5,
+      "isVisible": true
+    },
+    {
+      "widgetType": "CHART",
+      "title": "Revenue by region",
+      "body": null,
+      "rawSql": "SELECT\n    region AS `Region`,\n    round(sum(total_amount), 2) AS `Revenue`\nFROM sample.sales\nWHERE sale_date BETWEEN toDate(:date_from) AND toDate(:date_to)\n  AND (:region = 'All' OR region = :region)\n  AND (:category = 'All' OR category = :category)\nGROUP BY region\nORDER BY `Revenue`",
+      "chartConfig": "{\"type\": \"bar\", \"orientation\": \"horizontal\", \"categoryField\": \"Region\", \"valueFields\": [\"Revenue\"], \"showLegend\": false, \"yAxisFormat\": \"currency\", \"yAxisCurrency\": \"USD\", \"yAxisDecimals\": 0, \"description\": \"Click a region to see its revenue by month.\"}",
+      "position": "{\"x\": 0, \"y\": 11, \"w\": 12, \"h\": 6}",
+      "style": "{}",
+      "paramMapping": "{\"date_from\": \"date_from\", \"date_to\": \"date_to\", \"region\": \"region\", \"category\": \"category\"}",
+      "sortOrder": 6,
+      "isVisible": true
+    },
+    {
+      "widgetType": "CHART",
+      "title": "Revenue by category",
+      "body": null,
+      "rawSql": "SELECT\n    category AS `Category`,\n    round(sum(total_amount), 2) AS `Revenue`\nFROM sample.sales\nWHERE sale_date BETWEEN toDate(:date_from) AND toDate(:date_to)\n  AND (:region = 'All' OR region = :region)\n  AND (:category = 'All' OR category = :category)\nGROUP BY category\nORDER BY `Revenue` DESC",
+      "chartConfig": "{\"type\": \"pie\", \"donut\": true, \"categoryField\": \"Category\", \"valueFields\": [\"Revenue\"], \"showLegend\": true, \"legendPosition\": \"bottom\", \"description\": \"Click a category to see the revenue of its products.\"}",
+      "position": "{\"x\": 12, \"y\": 11, \"w\": 12, \"h\": 6}",
+      "style": "{}",
+      "paramMapping": "{\"date_from\": \"date_from\", \"date_to\": \"date_to\", \"region\": \"region\", \"category\": \"category\"}",
+      "sortOrder": 7,
+      "isVisible": true
+    },
+    {
+      "widgetType": "TABLE",
+      "title": "Top 10 products",
+      "body": null,
+      "rawSql": "SELECT\n    product_name AS `Product`,\n    category AS `Category`,\n    count() AS `Orders`,\n    sum(quantity) AS `Units`,\n    round(sum(total_amount), 2) AS `Revenue`,\n    round(avg(unit_price), 2) AS `Average price`\nFROM sample.sales\nWHERE sale_date BETWEEN toDate(:date_from) AND toDate(:date_to)\n  AND (:region = 'All' OR region = :region)\n  AND (:category = 'All' OR category = :category)\nGROUP BY product_name, category\nORDER BY `Revenue` DESC\nLIMIT 10",
+      "chartConfig": "{\"tableDensity\": \"compact\", \"clickParams\": [{\"column\": \"Category\", \"param\": \"category\"}], \"description\": \"Click a row to filter the dashboard by the category of the product.\"}",
+      "position": "{\"x\": 0, \"y\": 17, \"w\": 14, \"h\": 6}",
+      "style": "{}",
+      "paramMapping": "{\"date_from\": \"date_from\", \"date_to\": \"date_to\", \"region\": \"region\", \"category\": \"category\"}",
+      "sortOrder": 8,
+      "isVisible": true
+    },
+    {
+      "widgetType": "TABLE",
+      "title": "Regions",
+      "body": null,
+      "rawSql": "SELECT\n    region AS `Region`,\n    count() AS `Orders`,\n    round(sum(total_amount), 2) AS `Revenue`,\n    round(sum(total_amount) / (\n        SELECT sum(total_amount)\n        FROM sample.sales\n        WHERE sale_date BETWEEN toDate(:date_from) AND toDate(:date_to)\n          AND (:region = 'All' OR region = :region)\n          AND (:category = 'All' OR category = :category)\n    ) * 100, 1) AS `Share, %`\nFROM sample.sales\nWHERE sale_date BETWEEN toDate(:date_from) AND toDate(:date_to)\n  AND (:region = 'All' OR region = :region)\n  AND (:category = 'All' OR category = :category)\nGROUP BY region\nORDER BY `Revenue` DESC",
+      "chartConfig": "{\"tableDensity\": \"compact\", \"clickParams\": [{\"column\": \"Region\", \"param\": \"region\"}], \"description\": \"Click a row to filter the dashboard by the region.\"}",
+      "position": "{\"x\": 14, \"y\": 17, \"w\": 10, \"h\": 6}",
+      "style": "{}",
+      "paramMapping": "{\"date_from\": \"date_from\", \"date_to\": \"date_to\", \"region\": \"region\", \"category\": \"category\"}",
+      "sortOrder": 9,
+      "isVisible": true
+    },
+    {
+      "widgetType": "CHART",
+      "title": "Revenue by month in the region",
+      "body": null,
+      "rawSql": "SELECT\n    formatDateTime(toStartOfMonth(sale_date), '%Y-%m') AS `Month`,\n    round(sum(total_amount), 2) AS `Revenue`\nFROM sample.sales\nWHERE sale_date BETWEEN toDate(:date_from) AND toDate(:date_to)\n  AND (:region = 'All' OR region = :region)\n  AND (:category = 'All' OR category = :category)\nGROUP BY `Month`\nORDER BY `Month`",
+      "chartConfig": "{\"type\": \"line\", \"smooth\": true, \"categoryField\": \"Month\", \"valueFields\": [\"Revenue\"], \"showLegend\": false, \"yAxisFormat\": \"currency\", \"yAxisCurrency\": \"USD\", \"yAxisDecimals\": 0}",
+      "position": "{\"x\": 0, \"y\": 11, \"w\": 12, \"h\": 6}",
+      "style": "{}",
+      "paramMapping": "{\"date_from\": \"date_from\", \"date_to\": \"date_to\", \"region\": \"region\", \"category\": \"category\"}",
+      "sortOrder": 10,
+      "isVisible": true
+    },
+    {
+      "widgetType": "CHART",
+      "title": "Revenue by product in the category",
+      "body": null,
+      "rawSql": "SELECT\n    product_name AS `Product`,\n    round(sum(total_amount), 2) AS `Revenue`\nFROM sample.sales\nWHERE sale_date BETWEEN toDate(:date_from) AND toDate(:date_to)\n  AND (:region = 'All' OR region = :region)\n  AND (:category = 'All' OR category = :category)\nGROUP BY product_name\nORDER BY `Revenue`",
+      "chartConfig": "{\"type\": \"bar\", \"orientation\": \"horizontal\", \"categoryField\": \"Product\", \"valueFields\": [\"Revenue\"], \"showLegend\": false, \"yAxisFormat\": \"currency\", \"yAxisCurrency\": \"USD\", \"yAxisDecimals\": 0}",
+      "position": "{\"x\": 12, \"y\": 11, \"w\": 12, \"h\": 6}",
+      "style": "{}",
+      "paramMapping": "{\"date_from\": \"date_from\", \"date_to\": \"date_to\", \"region\": \"region\", \"category\": \"category\"}",
+      "sortOrder": 11,
+      "isVisible": true
+    }
+  ],
+  "containers": [],
+  "parameterControls": [
+    {
+      "parameterName": "date_from",
+      "controlType": "DATE_PICKER",
+      "datasourceId": null,
+      "optionsQuery": null,
+      "sliderMin": null,
+      "sliderMax": null,
+      "sliderStep": 1.0,
+      "config": "{}",
+      "sortOrder": 0
+    },
+    {
+      "parameterName": "date_to",
+      "controlType": "DATE_PICKER",
+      "datasourceId": null,
+      "optionsQuery": null,
+      "sliderMin": null,
+      "sliderMax": null,
+      "sliderStep": 1.0,
+      "config": "{}",
+      "sortOrder": 1
+    },
+    {
+      "parameterName": "region",
+      "controlType": "DROPDOWN",
+      "datasourceId": null,
+      "optionsQuery": "SELECT ['All', 'Central', 'East', 'North', 'South', 'West'][o_order] AS o_value\nFROM\n(\n    SELECT arrayJoin(arrayEnumerate(['All', 'Central', 'East', 'North', 'South', 'West'])) AS o_order\n)\nORDER BY o_order",
+      "sliderMin": null,
+      "sliderMax": null,
+      "sliderStep": 1.0,
+      "config": "{}",
+      "sortOrder": 2
+    },
+    {
+      "parameterName": "category",
+      "controlType": "DROPDOWN",
+      "datasourceId": null,
+      "optionsQuery": "SELECT ['All', 'Accessories', 'Electronics', 'Home', 'Services'][o_order] AS o_value\nFROM\n(\n    SELECT arrayJoin(arrayEnumerate(['All', 'Accessories', 'Electronics', 'Home', 'Services'])) AS o_order\n)\nORDER BY o_order",
+      "sliderMin": null,
+      "sliderMax": null,
+      "sliderStep": 1.0,
+      "config": "{}",
+      "sortOrder": 3
+    }
+  ],
+  "actions": [
+    {
+      "name": "Revenue by region -> Revenue by month in the region",
+      "actionType": "DRILL_REPLACE",
+      "triggerType": "CLICK",
+      "sourceWidgetSortOrder": 6,
+      "targetWidgetSortOrders": "10",
+      "sourceField": "Region",
+      "targetField": null,
+      "urlTemplate": null,
+      "config": "{\"paramName\": \"region\"}"
+    },
+    {
+      "name": "Revenue by category -> Revenue by product in the category",
+      "actionType": "DRILL_REPLACE",
+      "triggerType": "CLICK",
+      "sourceWidgetSortOrder": 7,
+      "targetWidgetSortOrders": "11",
+      "sourceField": "Category",
+      "targetField": null,
+      "urlTemplate": null,
+      "config": "{\"paramName\": \"category\"}"
+    }
+  ]
+}
