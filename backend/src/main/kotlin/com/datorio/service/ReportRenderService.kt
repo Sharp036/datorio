@@ -148,10 +148,8 @@ class ReportRenderService(
         for (param in report.parameters) {
             val value = provided[param.name]
             if (value != null) {
-                // The parameter panel sends a multi-select as "a,b"; the resolver needs a list to build an IN list
-                resolved[param.name] = if (param.paramType == ParamType.MULTI_SELECT && value is String) {
-                    value.split(',').map { it.trim() }.filter { it.isNotEmpty() }
-                } else value
+                // A multi-select arrives as the string "a,b": report SQL splits it, e.g. splitByChar(',', :p)
+                resolved[param.name] = value
             } else if (param.defaultValue != null) {
                 resolved[param.name] = resolveDefaultValue(param)
             } else if (param.isRequired) {
