@@ -5,11 +5,13 @@ example reports from examples/reports. Run it after `docker compose up -d`:
 
     python3 examples/load_examples.py
 
-ADMIN_USER, ADMIN_PASSWORD, APP_PORT and CH_PASSWORD are read from .env when it exists. Objects that
-already exist (by name) are left as they are, so the script can be run again. Needs Python 3.8+ only.
+ADMIN_USER, ADMIN_PASSWORD, APP_PORT, AIRFLOW_PORT and CH_PASSWORD are read from .env when it exists.
+Objects that already exist (by name) are left as they are, so the script can be run again. In a GitHub
+Codespace the report links point to the forwarded address of the port. Needs Python 3.8+ only.
 """
 import argparse
 import json
+import os
 import pathlib
 import sys
 import time
@@ -66,7 +68,8 @@ class Api:
 def main():
     env = read_env()
     parser = argparse.ArgumentParser(description='Load the Datorio examples')
-    parser.add_argument('--url', default=f"http://localhost:{env.get('APP_PORT', '8080')}")
+    app_port = env.get('APP_PORT', '8080')
+    parser.add_argument('--url', default=f'http://localhost:{app_port}')
     parser.add_argument('--user', default=env.get('ADMIN_USER', 'admin'))
     parser.add_argument('--password', default=env.get('ADMIN_PASSWORD', 'admin'))
     parser.add_argument('--clickhouse-password', default=env.get('CH_PASSWORD', 'clickhouse'))
@@ -99,6 +102,11 @@ def main():
         print(f'Import source "{source["name"]}" created: upload examples/sales_2026_01.xlsx with it on the '
               f'Upload tab of Data Import')
 
+    # The browser of a Codespace reaches a port through its forwarded address, not localhost
+    codespace = os.environ.get('CODESPACE_NAME')
+    domain = os.environ.get('GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN')
+    link_base = f'https://{codespace}-{app_port}.{domain}' if codespace and domain else args.url
+
     reports = {r['name']: r['id'] for r in api.call('GET', '/reports?size=1000')['content']}
     for path in sorted((EXAMPLES / 'reports').glob('*.json')):
         config = json.loads(path.read_text(encoding='utf-8'))
@@ -109,10 +117,14 @@ def main():
             report_id = api.call('POST', '/templates/import',
                                  {'config': config, 'datasourceId': datasource['id']})['reportId']
             print(f'Report "{config["name"]}" imported')
-        print(f'  {args.url}/reports/{report_id}')
+        print(f'  {link_base}/reports/{report_id}')
 
-    print('The report "Airflow job example" needs the Airflow container: '
-          'docker compose -f docker-compose.yml -f examples/airflow/compose.yml up -d')
+    airflow = f"http://localhost:{env.get('AIRFLOW_PORT', '8088')}/api/v2/version"
+    try:
+        urllib.request.urlopen(airflow, timeout=5).close()
+    except (urllib.error.URLError, OSError):
+        print('The report "Airflow job example" needs the Airflow container: '
+              'docker compose -f docker-compose.yml -f examples/airflow/compose.yml up -d')
 
 
 if __name__ == '__main__':

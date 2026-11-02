@@ -851,6 +851,7 @@
   "interactive.button.no_rows": "Нет данных в \"{{widget}}\"",
   "interactive.button.job_queued": "В очереди",
   "interactive.button.job_step": "Выполнено шагов: {{done}} из {{total}}, сейчас: {{task}}",
+  "interactive.button.job_steps_done": "Выполнено шагов: {{done}} из {{total}}",
   "interactive.button.job_done": "Готово",
   "interactive.button.job_failed_step": "Ошибка на шаге: {{task}}",
   "interactive.button.job_status_unavailable": "Не удалось получить состояние запуска",
