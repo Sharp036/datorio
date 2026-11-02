@@ -60,7 +60,7 @@ jobs:
           name: test-results
           path: backend/build/reports/tests/
 
-  # ── Examples: sample data, the Airflow example DAG and the example reports ──
+  # ── Examples: the quick start stack, the Airflow example DAG and the example reports ──
   examples:
     runs-on: ubuntu-latest
     env:
@@ -68,15 +68,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Start ClickHouse with the sample data and Airflow with the example DAG
-        run: docker compose -f docker-compose.yml -f examples/airflow/compose.yml up -d --wait --wait-timeout 600 clickhouse airflow
+      - name: Start the quick start stack (Datorio built from this commit) with the Airflow example
+        run: docker compose -f docker-compose.yml -f examples/airflow/compose.yml up -d --build --wait --wait-timeout 900
 
       - name: Check the sample data, run the example DAG and every query of the example reports
         run: python3 .github/scripts/check_examples.py
 
+      - name: Load the examples into Datorio the way the README says
+        run: python3 examples/load_examples.py
+
+      - name: Render the example reports in Datorio and start the DAG with the report button
+        run: python3 .github/scripts/check_examples.py datorio
+
       - name: Container logs
         if: failure()
-        run: docker compose -f docker-compose.yml -f examples/airflow/compose.yml logs --tail 300 clickhouse airflow
+        run: docker compose -f docker-compose.yml -f examples/airflow/compose.yml logs --tail 300
 
   # ── Build & Push Docker Image ──
   build:

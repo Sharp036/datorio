@@ -53,8 +53,9 @@ COPY --from=backend-build /app/backend/build/libs/*.jar app.jar
 # Copy frontend build
 COPY --from=frontend-build /app/dist ./static
 
-# Health check (hits nginx:8080 → proxies to java:8081)
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+# Health check (hits nginx:8080 → proxies to java:8081); failures during the first two minutes
+# of Flyway and Spring startup do not count
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
   CMD wget -qO- http://127.0.0.1:8080/api/health || exit 1
 
 EXPOSE 8080
