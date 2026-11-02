@@ -5,6 +5,10 @@
    report asks for; both runs are recorded in sample.job_runs.
 3. Every query of the example reports runs with the default parameter values and returns rows, and the
    widget a drill-replace shows returns rows for the first value of the chart it replaces.
+
+With the argument "datorio" it checks the application after examples/load_examples.py instead: the
+report list loads, the three example reports render without widget errors, and the button of the
+Airflow job example starts the DAG through Datorio and the run succeeds.
 """
 import base64
 import datetime
@@ -14,12 +18,14 @@ import re
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 CLICKHOUSE = 'http://localhost:8123'
 CLICKHOUSE_AUTH = 'Basic ' + base64.b64encode(b'default:clickhouse').decode()
 AIRFLOW = 'http://localhost:8088'
+DATORIO = 'http://localhost:8080/api'
 DAG_ID = 'datorio_demo_sales_summary'
 
 
@@ -142,7 +148,42 @@ def check_reports():
                 assert result, f'{report["name"]} / {widget["title"]} returned no rows for {param} = {value}'
 
 
-check_sample_data()
-check_dag()
-check_reports()
+def check_datorio():
+    token = json.loads(http('POST', DATORIO + '/auth/login', {'username': 'admin', 'password': 'admin'}))['accessToken']
+    auth = {'Authorization': 'Bearer ' + token}
+    reports = {r['name']: r['id'] for r in json.loads(http('GET', DATORIO + '/reports?size=100', headers=auth))['content']}
+    print('reports', reports)
+    expected = {json.loads(p.read_text(encoding='utf-8'))['name'] for p in (ROOT / 'examples' / 'reports').glob('*.json')}
+    assert expected <= set(reports), expected - set(reports)
+    for name in sorted(expected):
+        result = json.loads(http('POST', f'{DATORIO}/reports/{reports[name]}/render', {}, auth))
+        for w in result['widgets']:
+            title = w.get('title') or w['widgetType']
+            assert not w.get('error'), f'{name} / {title}: {w["error"]}'
+            if w['widgetType'] in ('CHART', 'TABLE', 'KPI'):
+                assert w.get('data') and w['data']['rowCount'] > 0, f'{name} / {title} has no rows'
+        print(f'{name}: {len(result["widgets"])} widgets rendered')
+
+    # The button of the Airflow job example, the way the report page presses it
+    report_id = reports['Airflow job example']
+    widgets = json.loads(http('GET', f'{DATORIO}/reports/{report_id}/widgets', headers=auth))
+    button = next(w for w in widgets if w['widgetType'] == 'BUTTON')
+    params = {'region': 'South', 'date_from': '2025-01-01', 'date_to': '2025-06-30', 'fail_at_step': '0'}
+    run = json.loads(http('POST', f'{DATORIO}/reports/{report_id}/widgets/{button["id"]}/run-job',
+                          {'parameters': params}, auth))
+    status_url = (f'{DATORIO}/reports/{report_id}/widgets/{button["id"]}/run-job/status?runId='
+                  + urllib.parse.quote(run['runId'], safe=''))
+    status = wait('the run started by the button',
+                  lambda: (lambda s: s if s['finished'] else None)(json.loads(http('GET', status_url, headers=auth))),
+                  300)
+    print('button run', run['runId'], status['state'], status['doneTasks'], '/', status['totalTasks'])
+    assert status['state'] == 'success', status
+
+
+if sys.argv[1:] == ['datorio']:
+    check_datorio()
+else:
+    check_sample_data()
+    check_dag()
+    check_reports()
 print('Examples OK')

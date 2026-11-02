@@ -9,7 +9,10 @@ spring:
 
   # ── Metadata Database (internal) ──
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:datorio}?stringtype=unspecified
+    # No stringtype=unspecified: with it a null string parameter has no type, and every
+    # "(:p IS NULL OR ...)" query fails ("could not determine data type of parameter"); jsonb
+    # columns are bound by their entity mappings
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:datorio}
     username: ${DB_USER:datorio}
     password: ${DB_PASSWORD:datorio}
     driver-class-name: org.postgresql.Driver
