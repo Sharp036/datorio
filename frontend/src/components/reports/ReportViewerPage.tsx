@@ -656,8 +656,9 @@ export default function ReportViewerPage() {
             <Loader2 className="w-6 h-6 text-brand-500 animate-spin" />
           </div>
         )}
+        {/* Logical sides: in a right-to-left interface the title starts on the right */}
         {showMenu && (
-          <div className="absolute top-2 right-2 z-10">
+          <div className="absolute top-2 end-2 z-10">
             <WidgetContextMenu
               rawSql={originalWidget?.rawSql}
               datasourceId={originalWidget?.datasourceId}
@@ -668,7 +669,7 @@ export default function ReportViewerPage() {
           </div>
         )}
         {drillEntry && (
-          <div className="absolute top-2 left-2 z-10 flex items-center gap-2">
+          <div className="absolute top-2 start-2 z-10 flex items-center gap-2">
             <button
               onClick={() => useActionStore.getState().undoDrillReplace(drillEntry.sourceWidgetId)}
               className="flex items-center gap-1 text-xs px-2 py-1 rounded bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 hover:bg-brand-100 dark:hover:bg-brand-900/50 transition-colors"
@@ -912,8 +913,9 @@ export default function ReportViewerPage() {
         <div className="flex items-center gap-3">
           <Link to="/reports" className="btn-ghost p-2"><ArrowLeft className="w-5 h-5" /></Link>
           <div>
-            <h1 className="text-lg font-bold text-slate-800 dark:text-white leading-tight">{report.name}</h1>
-            {report.description && <p className="text-xs text-slate-500 dark:text-slate-400 leading-tight">{report.description}</p>}
+            {/* dir="auto": a name or description in another script keeps its punctuation in place */}
+            <h1 dir="auto" className="text-lg font-bold text-slate-800 dark:text-white leading-tight">{report.name}</h1>
+            {report.description && <p dir="auto" className="text-xs text-slate-500 dark:text-slate-400 leading-tight">{report.description}</p>}
           </div>
           <FavoriteButton objectType="REPORT" objectId={report?.id || 0} size={20} />
         </div>

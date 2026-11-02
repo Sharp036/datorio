@@ -277,6 +277,7 @@ export function RichTextWidget({ content, style, data }: RichTextWidgetProps) {
   return (
     <div className={alignTop ? 'h-full flex items-start overflow-auto p-4' : 'h-full flex items-center p-4'}>
       <div
+        dir="auto"
         className="prose dark:prose-invert text-sm w-full max-w-none"
         style={customStyle}
         dangerouslySetInnerHTML={{ __html: themedHtml }}

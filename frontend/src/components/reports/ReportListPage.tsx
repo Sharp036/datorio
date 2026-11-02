@@ -300,10 +300,10 @@ export default function ReportListPage() {
         <GripVertical className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600 flex-shrink-0 opacity-0 group-hover:opacity-100 cursor-grab" />
         <span className="text-xs text-slate-400 dark:text-slate-500 font-mono flex-shrink-0">#{r.id}</span>
         <div className="min-w-0">
-          <Link to={`/reports/${r.slug}`} className="font-medium text-slate-800 dark:text-white hover:text-brand-600 dark:hover:text-brand-400 truncate block">
+          <Link dir="auto" to={`/reports/${r.slug}`} className="font-medium text-slate-800 dark:text-white hover:text-brand-600 dark:hover:text-brand-400 truncate block">
             {r.name}
           </Link>
-          {r.description && <p className="text-xs text-slate-400 truncate">{r.description}</p>}
+          {r.description && <p dir="auto" className="text-xs text-slate-400 truncate">{r.description}</p>}
         </div>
       </div>
       <div>
@@ -331,11 +331,12 @@ export default function ReportListPage() {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
             <span className="text-xs text-slate-400 dark:text-slate-500 font-mono flex-shrink-0">#{r.id}</span>
-            <Link to={`/reports/${r.slug}`} className="text-base font-semibold text-slate-800 dark:text-white hover:text-brand-600 dark:hover:text-brand-400 truncate block">
+            {/* dir="auto": a name or description in another script is cut at its own end */}
+            <Link dir="auto" to={`/reports/${r.slug}`} className="text-base font-semibold text-slate-800 dark:text-white hover:text-brand-600 dark:hover:text-brand-400 truncate block">
               {r.name}
             </Link>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">{r.description || t('reports.no_description')}</p>
+          <p dir="auto" className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">{r.description || t('reports.no_description')}</p>
         </div>
         <span className={clsx('text-xs px-2 py-0.5 rounded-full font-medium ml-2 flex-shrink-0', statusBadge(r.status))}>
           {statusLabel(r.status)}
