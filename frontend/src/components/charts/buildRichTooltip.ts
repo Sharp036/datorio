@@ -1,4 +1,5 @@
 import type { TooltipConfigItem, TooltipFieldDef } from '@/api/visualization'
+import { formatLocale } from '@/utils/formatLocale'
 
 /**
  * Build an ECharts tooltip configuration from TooltipConfigItem.
@@ -118,11 +119,11 @@ function formatValue(val: any, def: TooltipFieldDef): string {
 
   switch (def.format) {
     case 'number':
-      return `${prefix}${num.toLocaleString()}${suffix}`
+      return `${prefix}${num.toLocaleString(formatLocale)}${suffix}`
     case 'percent':
       return `${prefix}${(num * 100).toFixed(1)}%${suffix}`
     case 'currency':
-      return `${prefix}$${num.toLocaleString(undefined, { minimumFractionDigits: 2 })}${suffix}`
+      return `${prefix}$${num.toLocaleString(formatLocale, { minimumFractionDigits: 2 })}${suffix}`
     case 'compact': {
       if (num >= 1_000_000) return `${prefix}${(num / 1_000_000).toFixed(1)}M${suffix}`
       if (num >= 1_000) return `${prefix}${(num / 1_000).toFixed(1)}K${suffix}`

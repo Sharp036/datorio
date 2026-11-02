@@ -4,6 +4,7 @@ import {
   adminUserApi, adminRoleApi,
   AdminUser, RoleListItem, PageResponse
 } from '@/api/admin';
+import { formatLocale } from '@/utils/formatLocale';
 
 interface UserFormData {
   username: string;
@@ -206,7 +207,7 @@ const UserManagement: React.FC = () => {
                   <span className={`status-dot ${user.isActive ? 'active' : 'inactive'}`} />
                   {user.isActive ? t('common.status.active') : t('common.status.disabled')}
                 </td>
-                <td>{new Date(user.createdAt).toLocaleDateString()}</td>
+                <td>{new Date(user.createdAt).toLocaleDateString(formatLocale)}</td>
                 <td className="actions">
                   <button className="btn btn-sm" onClick={() => handleEdit(user)} title={t('common.edit')}>
                     ✏️

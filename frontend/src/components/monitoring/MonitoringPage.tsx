@@ -6,6 +6,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner'
 import { Activity, Database, Zap, HardDrive, RefreshCw, Trash2, ToggleLeft, ToggleRight, Search } from 'lucide-react'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
+import { formatLocale } from '@/utils/formatLocale'
 
 export default function MonitoringPage() {
   const { t } = useTranslation()
@@ -187,7 +188,7 @@ export default function MonitoringPage() {
                 <span className="text-slate-500">Cost: <span className="font-semibold">{explainResult.estimatedCost.toFixed(1)}</span></span>
               )}
               {explainResult.estimatedRows != null && (
-                <span className="text-slate-500">Est. rows: <span className="font-semibold">{explainResult.estimatedRows.toLocaleString()}</span></span>
+                <span className="text-slate-500">Est. rows: <span className="font-semibold">{explainResult.estimatedRows.toLocaleString(formatLocale)}</span></span>
               )}
             </div>
 

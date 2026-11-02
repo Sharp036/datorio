@@ -25,6 +25,7 @@ import {
   buildAutoYAxisMin,
   type PieLabelContent,
 } from '@/components/charts/chartFeatures'
+import { formatLocale } from '@/utils/formatLocale'
 
 function buildLegendOption(seriesCount: number, legendPosition: string, selectorLabels?: { all: string; inv: string }) {
   // Show the legend for any non-empty chart unless the user explicitly chose
@@ -143,7 +144,7 @@ function formatLabelValue(v: unknown, decimals: number, thousandsSep: boolean): 
   const num = Number(v)
   if (!Number.isFinite(num)) return String(v ?? '')
   if (thousandsSep) {
-    return num.toLocaleString(undefined, {
+    return num.toLocaleString(formatLocale, {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,
     })

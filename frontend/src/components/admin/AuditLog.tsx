@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { auditLogApi, AuditLogEntry, PageResponse } from '@/api/admin';
+import { formatLocale } from '@/utils/formatLocale';
 
 const ACTION_COLORS: Record<string, string> = {
   USER_CREATE: '#22c55e',
@@ -47,7 +48,7 @@ const AuditLog: React.FC = () => {
 
   const formatDate = (iso: string) => {
     const d = new Date(iso);
-    return d.toLocaleString();
+    return d.toLocaleString(formatLocale);
   };
 
   const formatDetails = (details: Record<string, unknown>) => {

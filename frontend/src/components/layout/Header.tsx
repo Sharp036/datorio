@@ -1,10 +1,13 @@
-import { Sun, Moon, LogOut, User, Globe, BookOpen, Info } from 'lucide-react'
+import { Sun, Moon, LogOut, User, Globe, BookOpen, Info, Hash } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useThemeStore } from '@/store/themeStore'
+import { useDesignerStore } from '@/store/useDesignerStore'
 import { useState, useRef, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { SUPPORTED_LANGUAGES } from '@/i18n'
 import { authApi } from '@/api/auth'
+import { FORMAT_LOCALES, formatLocale, setFormatLocale, formatLocaleName, formatLocaleSample } from '@/utils/formatLocale'
 import GlobalSearchBar from '@/components/search/GlobalSearchBar'
 import Logo from '@/components/common/Logo'
 import clsx from 'clsx'
@@ -15,14 +18,18 @@ export default function Header() {
   const { t, i18n } = useTranslation()
   const [menuOpen, setMenuOpen] = useState(false)
   const [langOpen, setLangOpen] = useState(false)
+  const [formatOpen, setFormatOpen] = useState(false)
   const [aboutOpen, setAboutOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const langRef = useRef<HTMLDivElement>(null)
+  const formatRef = useRef<HTMLDivElement>(null)
+  const location = useLocation()
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
       if (langRef.current && !langRef.current.contains(e.target as Node)) setLangOpen(false)
+      if (formatRef.current && !formatRef.current.contains(e.target as Node)) setFormatOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -37,6 +44,16 @@ export default function Header() {
     } catch {
       // Language is already set locally
     }
+  }
+
+  // Charts and tables keep the format they were built with, so a new format reloads the page
+  const handleFormatChange = (code: string | undefined) => {
+    setFormatOpen(false)
+    if (code === formatLocale) return
+    const inDesigner = /^\/reports\/(new|[^/]+\/edit)$/.test(location.pathname)
+    if (inDesigner && useDesignerStore.getState().dirty && !window.confirm(t('header.format_reload_confirm'))) return
+    setFormatLocale(code)
+    window.location.reload()
   }
 
   return (
@@ -72,6 +89,38 @@ export default function Header() {
                   <span className="text-xs text-slate-400">{lang.code.toUpperCase()}</span>
                 </button>
               ))}
+            </div>
+          )}
+        </div>
+
+        {/* Number and date format */}
+        <div className="relative" ref={formatRef}>
+          <button onClick={() => setFormatOpen(!formatOpen)} className="btn-ghost p-2 rounded-lg" title={t('header.format')}>
+            <Hash className="w-5 h-5" />
+          </button>
+          {formatOpen && (
+            <div className="absolute right-0 mt-2 w-96 bg-white dark:bg-dark-surface-50 rounded-xl shadow-xl border border-surface-200 dark:border-dark-surface-100 p-1 z-50 max-h-80 overflow-y-auto">
+              <div className="px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400">{t('header.format')}</div>
+              {[undefined, ...FORMAT_LOCALES].map(code => {
+                const [num, date] = formatLocaleSample(code)
+                return (
+                  <button
+                    key={code ?? 'auto'}
+                    onClick={() => handleFormatChange(code)}
+                    className={clsx(
+                      'flex items-center justify-between gap-3 w-full px-3 py-2 text-sm rounded-lg',
+                      formatLocale === code
+                        ? 'bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400'
+                        : 'hover:bg-surface-100 dark:hover:bg-dark-surface-100 text-slate-700 dark:text-slate-300'
+                    )}
+                  >
+                    <span className="truncate min-w-0">{code ? formatLocaleName(code) : t('header.format_auto')}</span>
+                    <span className="flex gap-2 text-xs text-slate-400 whitespace-nowrap">
+                      <span>{num}</span><span>{date}</span>
+                    </span>
+                  </button>
+                )
+              })}
             </div>
           )}
         </div>

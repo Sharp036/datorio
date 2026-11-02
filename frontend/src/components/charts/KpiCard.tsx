@@ -4,6 +4,7 @@ import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import clsx from 'clsx'
 import InfoTooltip from '@/components/common/InfoTooltip'
 import { buildValueFormatter } from '@/utils/formatValue'
+import { formatLocale } from '@/utils/formatLocale'
 
 interface Props { data: WidgetData; title?: string; chartConfig?: string }
 
@@ -250,7 +251,7 @@ export default function KpiCard({ data, title, chartConfig }: Props) {
   const displayValue = formatter
     ? formatter(numericValue)
     : hasNumeric
-      ? numericValue.toLocaleString()
+      ? numericValue.toLocaleString(formatLocale)
       : String(primaryValue ?? '—')
   const formatted = `${prefix}${displayValue}${suffix}`
 
@@ -372,7 +373,7 @@ export default function KpiCard({ data, title, chartConfig }: Props) {
               }}
             >
               {hoverPoint.label && <span className="opacity-80">{hoverPoint.label}: </span>}
-              <strong>{Number.isFinite(hoverPoint.value) ? hoverPoint.value.toLocaleString() : '—'}</strong>
+              <strong>{Number.isFinite(hoverPoint.value) ? hoverPoint.value.toLocaleString(formatLocale) : '—'}</strong>
             </div>
           )}
         </div>

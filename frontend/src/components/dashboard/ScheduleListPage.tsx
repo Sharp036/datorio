@@ -6,6 +6,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner'
 import EmptyState from '@/components/common/EmptyState'
 import { CalendarClock, Play, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { formatLocale } from '@/utils/formatLocale'
 
 export default function ScheduleListPage() {
   const { t } = useTranslation()
@@ -55,7 +56,7 @@ export default function ScheduleListPage() {
                 <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mt-1">
                   <code className="bg-surface-100 dark:bg-dark-surface-100 px-1.5 py-0.5 rounded">{s.cronExpression}</code>
                   <span>{s.outputFormat}</span>
-                  {s.lastRunAt && <span>{t('schedules.last_run')} {new Date(s.lastRunAt).toLocaleString()}</span>}
+                  {s.lastRunAt && <span>{t('schedules.last_run')} {new Date(s.lastRunAt).toLocaleString(formatLocale)}</span>}
                   {s.lastStatus && (
                     <span className={s.lastStatus === 'SUCCESS' ? 'text-emerald-600' : 'text-red-600'}>{s.lastStatus}</span>
                   )}

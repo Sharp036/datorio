@@ -14,6 +14,7 @@ import MoveToFolderMenu from '@/components/workspace/MoveToFolderMenu'
 import TagManager from '@/components/tags/TagManager'
 import { useAuthStore } from '@/store/authStore'
 import { workspaceApi, FolderDto } from '@/api/workspace'
+import { formatLocale } from '@/utils/formatLocale'
 
 // Synthetic folder id for the "no folder" group (real folder ids are positive).
 const UNCATEGORIZED = -1
@@ -312,7 +313,7 @@ export default function ReportListPage() {
       </div>
       <div className="text-right text-slate-500 dark:text-slate-400 text-sm">{r.widgetCount ?? 0}</div>
       <div className="text-right text-slate-500 dark:text-slate-400 text-sm">{r.parameterCount ?? 0}</div>
-      <div className="text-slate-500 dark:text-slate-400 text-xs">{new Date(r.updatedAt).toLocaleDateString()}</div>
+      <div className="text-slate-500 dark:text-slate-400 text-xs">{new Date(r.updatedAt).toLocaleDateString(formatLocale)}</div>
       <div className="opacity-0 group-hover:opacity-100 transition-opacity">{rowActions(r)}</div>
     </div>
   )
@@ -345,7 +346,7 @@ export default function ReportListPage() {
         <span>·</span>
         <span>{t('reports.params_count', { count: r.parameterCount ?? 0 })}</span>
         <span>·</span>
-        <span>{new Date(r.updatedAt).toLocaleDateString()}</span>
+        <span>{new Date(r.updatedAt).toLocaleDateString(formatLocale)}</span>
       </div>
       <div className="mb-2">
         <TagManager objectType="REPORT" objectId={r.id} compact />
