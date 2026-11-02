@@ -440,7 +440,9 @@ export default function MultiLayerChart({
             name: col,
             type: 'pie',
             radius: buildPieRadius(!!config.donut),
-            data: buildPieData(rows, categoryCol, col, config.colors as Record<string, string> | undefined),
+            // Slices take the chart palette, as bars and lines do, unless colors names a colour per category
+            data: buildPieData(rows, categoryCol, col, config.colors as Record<string, string> | undefined)
+              .map((d, i) => d.itemStyle ? d : { ...d, itemStyle: { color: palette[i % palette.length] } }),
             label: showDataLabels
               ? {
                   show: true,

@@ -6,8 +6,9 @@ example reports from examples/reports. Run it after `docker compose up -d`:
     python3 examples/load_examples.py
 
 ADMIN_USER, ADMIN_PASSWORD, APP_PORT, AIRFLOW_PORT and CH_PASSWORD are read from .env when it exists.
-Objects that already exist (by name) are left as they are, so the script can be run again. In a GitHub
-Codespace the report links point to the forwarded address of the port. Needs Python 3.8+ only.
+Objects that already exist (by name) are left as they are, so the script can be run again; --replace
+deletes the example reports of the same names and imports them again, to get updated examples. In a
+GitHub Codespace the report links point to the forwarded address of the port. Needs Python 3.8+ only.
 """
 import argparse
 import json
@@ -73,6 +74,8 @@ def main():
     parser.add_argument('--user', default=env.get('ADMIN_USER', 'admin'))
     parser.add_argument('--password', default=env.get('ADMIN_PASSWORD', 'admin'))
     parser.add_argument('--clickhouse-password', default=env.get('CH_PASSWORD', 'clickhouse'))
+    parser.add_argument('--replace', action='store_true',
+                        help='delete the example reports of the same names and import them again')
     args = parser.parse_args()
 
     api = Api(args.url)
@@ -110,6 +113,8 @@ def main():
     reports = {r['name']: r['id'] for r in api.call('GET', '/reports?size=1000')['content']}
     for path in sorted((EXAMPLES / 'reports').glob('*.json')):
         config = json.loads(path.read_text(encoding='utf-8'))
+        if config['name'] in reports and args.replace:
+            api.call('DELETE', f'/reports/{reports.pop(config["name"])}')
         if config['name'] in reports:
             report_id = reports[config['name']]
             print(f'Report "{config["name"]}" exists')
