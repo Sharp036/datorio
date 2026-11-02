@@ -46,7 +46,7 @@ An import source describes how a file lands in a PostgreSQL or ClickHouse table:
 - Scheduled report snapshots (cron) and data alerts with a history of triggered and resolved events
 - Query caching, performance monitoring and a query advisor
 - Roles (ADMIN, EDITOR, VIEWER, IMPORTER), object-level permissions and sharing, folders, favorites, tags and global search
-- Interface in 28 languages; translation fixes are welcome, see [Translations](#translations). Light and dark themes
+- Interface in 28 languages; translation fixes are welcome, see [Translations](#translations). Number and date format chosen apart from the language, the browser's by default. Light and dark themes
 - REST API with OpenAPI documentation (Swagger UI)
 
 ## Quick start

@@ -6,6 +6,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner'
 import EmptyState from '@/components/common/EmptyState'
 import { Bell, Plus, Play, Trash2, CheckCircle, AlertTriangle, X } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { formatLocale } from '@/utils/formatLocale'
 
 const OPERATORS = ['GT', 'GTE', 'LT', 'LTE', 'EQ', 'NEQ', 'BETWEEN']
 const OP_LABELS: Record<string, string> = {
@@ -112,7 +113,7 @@ export default function AlertsPage() {
                     </p>
                     <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
                       <span>{t('alerts.every_minutes', { interval: alert.checkIntervalMin })}</span>
-                      {alert.lastCheckedAt && <span>{t('alerts.last_check')} {new Date(alert.lastCheckedAt).toLocaleString()}</span>}
+                      {alert.lastCheckedAt && <span>{t('alerts.last_check')} {new Date(alert.lastCheckedAt).toLocaleString(formatLocale)}</span>}
                       {alert.lastValue != null && <span>{t('alerts.last_value')} {alert.lastValue}</span>}
                     </div>
 

@@ -114,6 +114,7 @@ export function DividerWidget({
 // ═══════════════════════════════════════════
 
 import type { WidgetData } from '@/types'
+import { formatLocale } from '@/utils/formatLocale'
 
 interface RichTextWidgetProps {
   content: string
@@ -170,7 +171,7 @@ function formatPlaceholderValue(value: unknown, format?: string): string {
   const hasNum = Number.isFinite(num)
   switch (format) {
     case 'int':
-      return hasNum ? Math.round(num).toLocaleString() : String(value)
+      return hasNum ? Math.round(num).toLocaleString(formatLocale) : String(value)
     case 'fixed1':
       return hasNum ? num.toFixed(1) : String(value)
     case 'fixed2':
@@ -187,7 +188,7 @@ function formatPlaceholderValue(value: unknown, format?: string): string {
     case 'millions':
       return hasNum ? `${(num / 1_000_000).toFixed(2)}M` : String(value)
     default:
-      return hasNum ? num.toLocaleString() : String(value)
+      return hasNum ? num.toLocaleString(formatLocale) : String(value)
   }
 }
 

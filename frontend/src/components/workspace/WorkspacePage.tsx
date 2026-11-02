@@ -10,6 +10,7 @@ import {
 import clsx from 'clsx'
 import toast from 'react-hot-toast'
 import MoveToFolderMenu from '@/components/workspace/MoveToFolderMenu'
+import { formatLocale } from '@/utils/formatLocale'
 
 const typeIcon: Record<string, typeof FileBarChart> = {
   REPORT: FileBarChart,
@@ -186,7 +187,7 @@ export default function WorkspacePage() {
                     <Icon className="w-4 h-4 text-slate-400 flex-shrink-0" />
                     <span className="text-sm text-slate-700 dark:text-slate-200 flex-1 truncate">{item.objectName}</span>
                     {item.isFavorite && <Star className="w-3.5 h-3.5 text-amber-400" fill="currentColor" />}
-                    <span className="text-xs text-slate-400">{new Date(item.viewedAt).toLocaleDateString()}</span>
+                    <span className="text-xs text-slate-400">{new Date(item.viewedAt).toLocaleDateString(formatLocale)}</span>
                     <span className="text-xs text-slate-300 dark:text-slate-600">{item.viewCount}×</span>
                   </Link>
                   {item.objectType === 'REPORT' && (

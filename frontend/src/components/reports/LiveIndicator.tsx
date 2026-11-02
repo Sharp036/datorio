@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { LiveStatus } from '@/hooks/useLiveData'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
+import { formatLocale } from '@/utils/formatLocale'
 
 dayjs.extend(relativeTime)
 
@@ -55,7 +56,7 @@ export default function LiveIndicator({ status, lastUpdate, enabled, onToggle, o
 
       {/* Last update time */}
       {enabled && lastUpdate && (
-        <span className="text-xs text-slate-400" title={new Date(lastUpdate).toLocaleTimeString()}>
+        <span className="text-xs text-slate-400" title={new Date(lastUpdate).toLocaleTimeString(formatLocale)}>
           {dayjs(lastUpdate).fromNow()}
         </span>
       )}

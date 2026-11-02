@@ -11,6 +11,7 @@ import ButtonWidget from '@/components/interactive/ButtonWidget'
 import type { ButtonConfig } from '@/api/controls'
 import { WebPageWidget, SpacerWidget, DividerWidget, RichTextWidget, ImageWidget } from '@/components/interactive/DashboardObjects'
 import type { AnnotationItem, TooltipConfigItem } from '@/api/visualization'
+import { formatLocale } from '@/utils/formatLocale'
 
 interface Props {
   widget: RenderedWidget
@@ -45,7 +46,7 @@ function formatTitleValue(value: unknown, format?: string): string {
   const num = Number(value)
   const hasNum = Number.isFinite(num)
   switch (format) {
-    case 'int':      return hasNum ? Math.round(num).toLocaleString() : String(value)
+    case 'int':      return hasNum ? Math.round(num).toLocaleString(formatLocale) : String(value)
     case 'fixed1':   return hasNum ? num.toFixed(1) : String(value)
     case 'fixed2':   return hasNum ? num.toFixed(2) : String(value)
     case 'fixed3':   return hasNum ? num.toFixed(3) : String(value)
@@ -54,7 +55,7 @@ function formatTitleValue(value: unknown, format?: string): string {
     case 'percent0': return hasNum ? `${Math.round(num * 100)}%` : String(value)
     case 'thousands':return hasNum ? `${(num / 1000).toFixed(1)}K` : String(value)
     case 'millions': return hasNum ? `${(num / 1_000_000).toFixed(2)}M` : String(value)
-    default:         return hasNum ? num.toLocaleString() : String(value)
+    default:         return hasNum ? num.toLocaleString(formatLocale) : String(value)
   }
 }
 

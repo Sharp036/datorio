@@ -7,6 +7,7 @@ import EmptyState from '@/components/common/EmptyState'
 import { Share2, FileBarChart, Database, LayoutDashboard, Search, Upload } from 'lucide-react'
 import clsx from 'clsx'
 import toast from 'react-hot-toast'
+import { formatLocale } from '@/utils/formatLocale'
 
 const typeIcon: Record<string, typeof FileBarChart> = {
   REPORT: FileBarChart,
@@ -122,7 +123,7 @@ export default function SharedWithMePage() {
                 </span>
 
                 <span className="text-xs text-slate-400">
-                  {new Date(item.sharedAt).toLocaleDateString()}
+                  {new Date(item.sharedAt).toLocaleDateString(formatLocale)}
                 </span>
               </Link>
             )

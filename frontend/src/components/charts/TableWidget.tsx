@@ -5,6 +5,7 @@ import type { WidgetData } from '@/types'
 import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ChevronsUpDown, Download, ZoomIn, ZoomOut, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import InfoTooltip from '@/components/common/InfoTooltip'
+import { formatLocale } from '@/utils/formatLocale'
 
 // ═════════════════════════════════════════════════════════════════════
 // Column formatters — visual enrichment for individual table columns.
@@ -152,7 +153,7 @@ function renderCellContent(
     const num = Number(rawValue)
     return (
       <span className="tabular-nums">
-        {Number.isFinite(num) ? num.toLocaleString() : String(rawValue)}
+        {Number.isFinite(num) ? num.toLocaleString(formatLocale) : String(rawValue)}
       </span>
     )
   }
@@ -451,12 +452,12 @@ export default function TableWidget({ data, title, chartConfig, onRowClick, clic
                     let result = ''
                     if (isNumeric && values.length > 0) {
                       switch (agg) {
-                        case 'SUM': result = values.reduce((a, b) => a + b, 0).toLocaleString(); break
+                        case 'SUM': result = values.reduce((a, b) => a + b, 0).toLocaleString(formatLocale); break
                         case 'COUNT': result = String(allRows.length); break
                         case 'DISTINCT_COUNT': result = String(new Set(allRows.map(r => r[col])).size); break
-                        case 'AVG': result = (values.reduce((a, b) => a + b, 0) / values.length).toLocaleString(undefined, { maximumFractionDigits: 2 }); break
-                        case 'MIN': result = Math.min(...values).toLocaleString(); break
-                        case 'MAX': result = Math.max(...values).toLocaleString(); break
+                        case 'AVG': result = (values.reduce((a, b) => a + b, 0) / values.length).toLocaleString(formatLocale, { maximumFractionDigits: 2 }); break
+                        case 'MIN': result = Math.min(...values).toLocaleString(formatLocale); break
+                        case 'MAX': result = Math.max(...values).toLocaleString(formatLocale); break
                       }
                     } else if (ci === 0) {
                       result = t('common.total')

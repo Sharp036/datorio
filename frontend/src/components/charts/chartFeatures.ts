@@ -10,6 +10,8 @@
  * existing per-data-point options that may come from other features.
  */
 
+import { formatLocale } from '@/utils/formatLocale'
+
 type ColorStop = { at: number; color: string }
 type ColorMode = 'step' | 'gradient'
 // Loose ECharts series shape - chart code passes through to ECharts which
@@ -284,7 +286,7 @@ export function buildCenterLabelGraphic(
   let mainText = cl.text ?? ''
   if (cl.valueField && cols.includes(cl.valueField)) {
     const total = rows.reduce((acc, r) => acc + (Number(r[cl.valueField!]) || 0), 0)
-    mainText = total.toLocaleString()
+    mainText = total.toLocaleString(formatLocale)
   }
   if (!mainText && !cl.subtext) return undefined
   return {
@@ -396,7 +398,7 @@ export function buildPieLabelFormatter(opts: {
   const fmtNumber = (n: number): string => {
     if (!Number.isFinite(n)) return String(n)
     if (opts.thousandsSep) {
-      return n.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+      return n.toLocaleString(formatLocale, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
     }
     return n.toFixed(decimals)
   }

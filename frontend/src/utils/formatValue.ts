@@ -13,6 +13,8 @@
  *   percent    - `0.42`    -> `"42.0%"` (multiplies by 100)
  */
 
+import { formatLocale } from './formatLocale'
+
 export function defaultAxisDecimals(format: string): number {
   if (format === 'currency') return 0
   if (format === 'percent') return 1
@@ -31,18 +33,18 @@ export function buildValueFormatter(
   )
   switch (format) {
     case 'thousands':
-      return (v: number) => (v / 1000).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d }) + 'K'
+      return (v: number) => (v / 1000).toLocaleString(formatLocale, { minimumFractionDigits: d, maximumFractionDigits: d }) + 'K'
     case 'millions':
-      return (v: number) => (v / 1_000_000).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d }) + 'M'
+      return (v: number) => (v / 1_000_000).toLocaleString(formatLocale, { minimumFractionDigits: d, maximumFractionDigits: d }) + 'M'
     case 'billions':
-      return (v: number) => (v / 1_000_000_000).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d }) + 'B'
+      return (v: number) => (v / 1_000_000_000).toLocaleString(formatLocale, { minimumFractionDigits: d, maximumFractionDigits: d }) + 'B'
     case 'currency':
-      return (v: number) => v.toLocaleString(undefined, { style: 'currency', currency, minimumFractionDigits: d, maximumFractionDigits: d })
+      return (v: number) => v.toLocaleString(formatLocale, { style: 'currency', currency, minimumFractionDigits: d, maximumFractionDigits: d })
     case 'percent':
-      return (v: number) => (v * 100).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d }) + '%'
+      return (v: number) => (v * 100).toLocaleString(formatLocale, { minimumFractionDigits: d, maximumFractionDigits: d }) + '%'
     case 'plain':
       return decimals != null
-        ? (v: number) => v.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d })
+        ? (v: number) => v.toLocaleString(formatLocale, { minimumFractionDigits: d, maximumFractionDigits: d })
         : undefined
     default:
       return undefined

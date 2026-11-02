@@ -20,6 +20,7 @@ import { useAuthStore } from '@/store/authStore'
 import { apiKeyApi } from '@/api/apikeys'
 import type { ApiKey, ApiKeyCreated } from '@/api/apikeys'
 import ShareDialog from '@/components/sharing/ShareDialog'
+import { formatLocale } from '@/utils/formatLocale'
 
 type Tab = 'sources' | 'upload' | 'history' | 'apikeys'
 
@@ -740,7 +741,7 @@ function HistoryTab({ canManage }: { canManage: boolean }) {
                   {canManage && (
                     <td className="py-2 pr-4 text-slate-500 dark:text-slate-400 truncate" title={log.uploadedBy ?? '-'}>{log.uploadedBy ?? '-'}</td>
                   )}
-                  <td className="py-2 pr-4 text-slate-500 dark:text-slate-400 whitespace-nowrap">{new Date(log.uploadedAt).toLocaleString()}</td>
+                  <td className="py-2 pr-4 text-slate-500 dark:text-slate-400 whitespace-nowrap">{new Date(log.uploadedAt).toLocaleString(formatLocale)}</td>
                   <td className="py-2 pr-3 text-right text-slate-500 dark:text-slate-400">{log.rowsTotal ?? '-'}</td>
                   <td className="py-2 pr-3 text-right text-emerald-600 dark:text-emerald-400">{log.rowsImported ?? '-'}</td>
                   <td className="py-2 pr-3 text-right text-red-500">{log.rowsFailed ?? '-'}</td>
