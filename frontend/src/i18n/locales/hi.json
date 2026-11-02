@@ -75,6 +75,7 @@
   "auth.password": "पासवर्ड",
   "auth.welcome_back": "वापसी पर स्वागत है!",
   "auth.invalid_credentials": "अमान्य क्रेडेंशियल",
+  "auth.server_unavailable": "सर्वर उपलब्ध नहीं है। एक मिनट बाद फिर से प्रयास करें",
   "auth.sign_out": "साइन आउट",
   "auth.change_password": "पासवर्ड बदलें",
   "auth.changing": "बदल रहे हैं...",

@@ -75,6 +75,7 @@
   "auth.password": "密码",
   "auth.welcome_back": "欢迎回来！",
   "auth.invalid_credentials": "凭据无效",
+  "auth.server_unavailable": "服务器不可用。请一分钟后重试",
   "auth.sign_out": "退出登录",
   "auth.change_password": "修改密码",
   "auth.changing": "修改中...",

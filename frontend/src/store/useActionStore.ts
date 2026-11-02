@@ -285,6 +285,23 @@ export function mergeDrillParams(
 }
 
 /**
+ * Parameters of one drill-replace target: the base values, the values of the drills that show its source
+ * (a drill opened from a drilled widget) and the values of the drill that shows it. Two drills open on
+ * different charts do not filter each other's targets.
+ */
+export function drillParamsForTarget(
+  base: Record<string, unknown>,
+  drillStack: DrillReplaceEntry[],
+  widgetId: number,
+  seen: Set<number> = new Set(),
+): Record<string, unknown> {
+  const entry = [...drillStack].reverse().find(e => e.targetWidgetIds.includes(widgetId))
+  if (!entry || seen.has(widgetId)) return { ...base }
+  seen.add(widgetId)
+  return { ...drillParamsForTarget(base, drillStack, entry.sourceWidgetId, seen), ...(entry.paramOverrides || {}) }
+}
+
+/**
  * Build WHERE-clause additions from active cross-filters.
  */
 export function buildFilterSql(filters: ActionFilter[]): string {

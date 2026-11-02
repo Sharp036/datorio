@@ -75,6 +75,7 @@
   "auth.password": "Κωδικός πρόσβασης",
   "auth.welcome_back": "Καλώς ήρθατε ξανά!",
   "auth.invalid_credentials": "Μη έγκυρα διαπιστευτήρια",
+  "auth.server_unavailable": "Ο διακομιστής δεν είναι διαθέσιμος. Δοκιμάστε ξανά σε ένα λεπτό",
   "auth.sign_out": "Αποσύνδεση",
   "auth.change_password": "Αλλαγή κωδικού",
   "auth.changing": "Αλλαγή...",

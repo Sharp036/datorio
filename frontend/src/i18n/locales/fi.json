@@ -75,6 +75,7 @@
   "auth.password": "Salasana",
   "auth.welcome_back": "Tervetuloa takaisin!",
   "auth.invalid_credentials": "Virheelliset tunnistetiedot",
+  "auth.server_unavailable": "Palvelin ei ole käytettävissä. Yritä uudelleen hetken kuluttua",
   "auth.sign_out": "Kirjaudu ulos",
   "auth.change_password": "Vaihda salasana",
   "auth.changing": "Vaihdetaan...",

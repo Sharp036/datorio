@@ -75,6 +75,7 @@
   "auth.password": "Passord",
   "auth.welcome_back": "Velkommen tilbake!",
   "auth.invalid_credentials": "Ugyldige påloggingsopplysninger",
+  "auth.server_unavailable": "Serveren er ikke tilgjengelig. Prøv igjen om et minutt",
   "auth.sign_out": "Logg ut",
   "auth.change_password": "Endre passord",
   "auth.changing": "Endrer...",

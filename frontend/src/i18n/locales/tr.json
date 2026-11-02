@@ -75,6 +75,7 @@
   "auth.password": "Şifre",
   "auth.welcome_back": "Tekrar hoş geldiniz!",
   "auth.invalid_credentials": "Geçersiz kimlik bilgileri",
+  "auth.server_unavailable": "Sunucuya ulaşılamıyor. Bir dakika sonra tekrar deneyin",
   "auth.sign_out": "Çıkış yap",
   "auth.change_password": "Şifre Değiştir",
   "auth.changing": "Değiştiriliyor...",

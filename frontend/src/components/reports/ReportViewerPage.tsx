@@ -18,7 +18,7 @@ import ExportMenu from './ExportMenu'
 import WidgetContextMenu from './WidgetContextMenu'
 import BookmarkBar from './BookmarkBar'
 import OverlayLayer from '@/components/interactive/OverlayLayer'
-import { useActionStore, mergeDrillParams, type DrillReplaceEntry } from '@/store/useActionStore'
+import { useActionStore, mergeDrillParams, drillParamsForTarget, type DrillReplaceEntry } from '@/store/useActionStore'
 import { interactiveApi } from '@/api/interactive'
 import type { InteractiveMeta } from '@/types'
 import { workspaceApi } from '@/api/workspace'
@@ -138,12 +138,13 @@ export default function ReportViewerPage() {
     }
   }, [])
 
-  // With an open drill-replace, its target widgets get opts.drillParams (the drill values on top of
-  // paramsToUse) and the other widgets paramsToUse, so the source widget is not filtered by the drill.
-  // onlyDrillTargets renders the targets alone, when a drill opens: the other widgets keep their data.
+  // With open drill-replaces, each target widget gets the values of its own drill on top of paramsToUse
+  // (drillParamsForTarget) and the other widgets paramsToUse, so a source widget is not filtered by its
+  // drill and two drills do not filter each other. onlyDrillTargets renders the targets alone, when a
+  // drill opens: the other widgets keep their data.
   const renderWithParams = useCallback(async (
     paramsToUse: Record<string, unknown>,
-    opts?: { drillTargetIds?: number[]; drillParams?: Record<string, unknown>; onlyDrillTargets?: boolean },
+    opts?: { drillTargetIds?: number[]; drillStack?: DrillReplaceEntry[]; onlyDrillTargets?: boolean },
   ) => {
     const rId = currentReportId || (id ? report?.id || 0 : null)
     if (!rId) return
@@ -151,26 +152,35 @@ export default function ReportViewerPage() {
     setRendering(true)
     try {
       const targetIds = opts?.drillTargetIds ?? []
-      const drillParams = opts?.drillParams ?? paramsToUse
+      const drillStack = opts?.drillStack ?? []
       let result: RenderReportResponse
       // Widget by widget when the loaded report is the one rendered (not yet after a drill to another report)
       if (report && report.id === rId) {
         const failedText = t('reports.widget_failed_to_load')
         const targetSet = new Set(targetIds)
-        const isTarget = (w: Report['widgets'][number]) => targetSet.has((w.id ?? w.widgetId) as number)
-        const [others, targets] = await Promise.all([
-          opts?.onlyDrillTargets ? null : reportApi.renderByWidget(rId, paramsToUse, report.widgets.filter(w => !isTarget(w)), failedText),
-          targetIds.length > 0 ? reportApi.renderByWidget(rId, drillParams, report.widgets.filter(isTarget), failedText) : null,
+        const widgetIdOf = (w: Report['widgets'][number]) => (w.id ?? w.widgetId) as number
+        // Drill targets with the same values render together
+        const groups = new Map<string, { params: Record<string, unknown>; widgets: Report['widgets'] }>()
+        for (const w of report.widgets.filter(w => targetSet.has(widgetIdOf(w)))) {
+          const params = drillParamsForTarget(paramsToUse, drillStack, widgetIdOf(w))
+          const key = JSON.stringify(params)
+          const group = groups.get(key) ?? { params, widgets: [] }
+          group.widgets.push(w)
+          groups.set(key, group)
+        }
+        const [others, ...targets] = await Promise.all([
+          opts?.onlyDrillTargets ? null : reportApi.renderByWidget(rId, paramsToUse, report.widgets.filter(w => !targetSet.has(widgetIdOf(w))), failedText),
+          ...[...groups.values()].map(g => reportApi.renderByWidget(rId, g.params, g.widgets, failedText)),
         ])
-        const byId = new Map([...(others?.widgets ?? []), ...(targets?.widgets ?? [])].map(w => [w.widgetId, w]))
-        const base = others ?? targets!
+        const rendered = [others, ...targets].filter((r): r is RenderReportResponse => !!r)
+        const byId = new Map(rendered.flatMap(r => r.widgets).map(w => [w.widgetId, w]))
         result = {
-          ...base,
-          widgets: report.widgets.map(w => byId.get((w.id ?? w.widgetId) as number)).filter((w): w is NonNullable<typeof w> => !!w),
-          executionMs: Math.max(others?.executionMs ?? 0, targets?.executionMs ?? 0),
+          ...rendered[0],
+          widgets: report.widgets.map(w => byId.get(widgetIdOf(w))).filter((w): w is NonNullable<typeof w> => !!w),
+          executionMs: Math.max(0, ...rendered.map(r => r.executionMs)),
         }
       } else {
-        result = await reportApi.render(rId, targetIds.length > 0 ? drillParams : paramsToUse)
+        result = await reportApi.render(rId, targetIds.length > 0 ? mergeDrillParams(paramsToUse, drillStack) : paramsToUse)
       }
       log.render('renderResult', { widgetCount: result.widgets.length, executionMs: result.executionMs })
       // Apply only the drill targets when they alone were rendered (a drill opened, or the whole report
@@ -224,7 +234,7 @@ export default function ReportViewerPage() {
     // An open drill keeps its values for its target widgets; the other widgets get the new values too
     await renderWithParams(finalParams, {
       drillTargetIds: [...new Set(drillStack.flatMap(e => e.targetWidgetIds))],
-      drillParams: mergeDrillParams(finalParams, drillStack),
+      drillStack,
     })
   }, [currentParams, renderWithParams])
 
@@ -448,7 +458,7 @@ export default function ReportViewerPage() {
     })
     renderWithParams(currentParams, {
       drillTargetIds: [...targetIds],
-      drillParams: mergeDrillParams(currentParams, drillReplaceStack),
+      drillStack: drillReplaceStack,
       onlyDrillTargets: true,
     }).finally(() => setDrillPending(false))
   }, [drillStackFingerprint]) // eslint-disable-line react-hooks/exhaustive-deps

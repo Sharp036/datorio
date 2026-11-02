@@ -75,6 +75,7 @@
   "auth.password": "Wachtwoord",
   "auth.welcome_back": "Welkom terug!",
   "auth.invalid_credentials": "Ongeldige inloggegevens",
+  "auth.server_unavailable": "De server is niet beschikbaar. Probeer het over een minuut opnieuw",
   "auth.sign_out": "Uitloggen",
   "auth.change_password": "Wachtwoord wijzigen",
   "auth.changing": "Wijzigen...",

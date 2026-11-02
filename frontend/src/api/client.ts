@@ -66,7 +66,9 @@ api.interceptors.response.use(
   async (error) => {
     const original = error.config
     const status = error.response?.status
-    if (status === 401 && !original._retry) {
+    // A 401 of the login or refresh call is a wrong password or an expired refresh token, not a session to renew
+    const isAuthCall = /\/auth\/(login|refresh)$/.test(original?.url || '')
+    if (status === 401 && !original._retry && !isAuthCall) {
       original._retry = true
       const refreshToken = localStorage.getItem('refreshToken')
       if (refreshToken) {

@@ -75,6 +75,7 @@
   "auth.password": "รหัสผ่าน",
   "auth.welcome_back": "ยินดีต้อนรับกลับ!",
   "auth.invalid_credentials": "ข้อมูลรับรองไม่ถูกต้อง",
+  "auth.server_unavailable": "เซิร์ฟเวอร์ไม่พร้อมใช้งาน โปรดลองอีกครั้งในอีกหนึ่งนาที",
   "auth.sign_out": "ออกจากระบบ",
   "auth.change_password": "เปลี่ยนรหัสผ่าน",
   "auth.changing": "กำลังเปลี่ยน...",

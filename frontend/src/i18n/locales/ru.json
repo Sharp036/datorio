@@ -87,6 +87,7 @@
   "auth.password": "Пароль",
   "auth.welcome_back": "С возвращением!",
   "auth.invalid_credentials": "Неверные учётные данные",
+  "auth.server_unavailable": "Сервер недоступен. Повторите попытку через минуту",
   "auth.sign_out": "Выйти",
   "auth.change_password": "Изменить пароль",
   "auth.changing": "Изменение...",

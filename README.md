@@ -78,7 +78,7 @@ The script waits for Datorio and creates:
 - the report **Airflow job example**, see [Try it with the example](#try-it-with-the-example);
 - the import source "Sample sales from Excel": upload [`examples/sales_2026_01.xlsx`](examples/sales_2026_01.xlsx) with it on the **Upload** tab of **Data Import** to add the January 2026 orders to `sample.sales`, then set the period of **Sales overview** to end in 2026 to see them.
 
-It reads `ADMIN_USER`, `ADMIN_PASSWORD`, `APP_PORT` and `CH_PASSWORD` from `.env` and skips what already exists, so it can be run again.
+It reads `ADMIN_USER`, `ADMIN_PASSWORD`, `APP_PORT` and `CH_PASSWORD` from `.env` and skips what already exists, so it can be run again; `--replace` imports the example reports again over the ones of the same names, for example after `git pull`.
 
 The API documentation is at http://localhost:8080/api/docs/swagger.
 

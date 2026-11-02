@@ -75,6 +75,7 @@
   "auth.password": "סיסמה",
   "auth.welcome_back": "ברוך שובך!",
   "auth.invalid_credentials": "פרטי התחברות שגויים",
+  "auth.server_unavailable": "השרת אינו זמין. נסה שוב בעוד דקה",
   "auth.sign_out": "התנתקות",
   "auth.change_password": "שנה סיסמה",
   "auth.changing": "משנה...",

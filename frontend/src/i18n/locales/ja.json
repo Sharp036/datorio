@@ -75,6 +75,7 @@
   "auth.password": "パスワード",
   "auth.welcome_back": "おかえりなさい！",
   "auth.invalid_credentials": "認証情報が無効です",
+  "auth.server_unavailable": "サーバーに接続できません。1 分後にもう一度お試しください",
   "auth.sign_out": "ログアウト",
   "auth.change_password": "パスワード変更",
   "auth.changing": "変更中...",

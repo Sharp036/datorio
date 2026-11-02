@@ -75,6 +75,7 @@
   "auth.password": "Heslo",
   "auth.welcome_back": "Vítejte zpět!",
   "auth.invalid_credentials": "Neplatné přihlašovací údaje",
+  "auth.server_unavailable": "Server není dostupný. Zkuste to znovu za minutu",
   "auth.sign_out": "Odhlásit se",
   "auth.change_password": "Změnit heslo",
   "auth.changing": "Měním...",

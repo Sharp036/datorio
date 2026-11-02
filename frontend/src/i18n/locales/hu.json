@@ -75,6 +75,7 @@
   "auth.password": "Jelszó",
   "auth.welcome_back": "Üdvözöljük újra!",
   "auth.invalid_credentials": "Érvénytelen hitelesítő adatok",
+  "auth.server_unavailable": "A szerver nem érhető el. Próbálja újra egy perc múlva",
   "auth.sign_out": "Kijelentkezés",
   "auth.change_password": "Jelszó módosítása",
   "auth.changing": "Módosítás...",

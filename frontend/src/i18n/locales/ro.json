@@ -75,6 +75,7 @@
   "auth.password": "Parolă",
   "auth.welcome_back": "Bine ați revenit!",
   "auth.invalid_credentials": "Date de autentificare invalide",
+  "auth.server_unavailable": "Serverul nu este disponibil. Încercați din nou peste un minut",
   "auth.sign_out": "Deconectare",
   "auth.change_password": "Schimbă parola",
   "auth.changing": "Se schimbă...",

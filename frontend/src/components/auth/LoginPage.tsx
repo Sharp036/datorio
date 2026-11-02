@@ -28,7 +28,11 @@ export default function LoginPage() {
         || new URLSearchParams(location.search).get('next')
       navigate(next && next.startsWith('/') && !next.startsWith('/login') ? next : '/', { replace: true })
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || t('auth.invalid_credentials')
+      const response = (err as { response?: { status?: number; data?: { message?: string } } })?.response
+      // 401 is a wrong user name or password; no answer or a 5xx means the server is not available
+      const msg = response?.status === 401 ? t('auth.invalid_credentials')
+        : !response?.status || response.status >= 500 ? t('auth.server_unavailable')
+          : response.data?.message || t('auth.invalid_credentials')
       toast.error(msg)
     } finally {
       setLoading(false)
