@@ -209,7 +209,10 @@ export default function ButtonWidget({
       const percent = st.totalTasks > 0 ? Math.round((st.doneTasks / st.totalTasks) * 100) : 0
       progress = {
         percent,
-        text: t('interactive.button.job_step', { done: st.doneTasks, total: st.totalTasks, task: st.currentTask || '-' }),
+        // Between steps (the next task is not started yet, or the run is being closed) there is no current step
+        text: st.currentTask
+          ? t('interactive.button.job_step', { done: st.doneTasks, total: st.totalTasks, task: st.currentTask })
+          : t('interactive.button.job_steps_done', { done: st.doneTasks, total: st.totalTasks }),
         tone: 'run',
         elapsed,
       }

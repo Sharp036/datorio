@@ -861,8 +861,10 @@ export default function MultiLayerChart({
       grid: {
         left: legendIsLeft ? legendSidePad : '3%',
         right: legendIsRight ? (hasRightAxis ? legendSidePad + 36 : legendSidePad) : (hasRightAxis ? '8%' : '4%'),
+        // A key set to undefined keeps ECharts from applying its own default (the grid then starts at 0
+        // and the top axis label is cut), so a chart without top labels gets an explicit margin
         top: !isPie
-          ? (legendIsTop ? Math.max(36, labelTopPad + topLegendReserve) : (labelTopPad || undefined))
+          ? (legendIsTop ? Math.max(36, labelTopPad + topLegendReserve) : (labelTopPad || 20))
           : undefined,
         bottom: gridBottom,
         containLabel: true,
