@@ -488,7 +488,7 @@ export default function MultiLayerChart({
                 ...(labelHidden ? { label: { show: false }, labelLine: { show: false } } : {}),
               }
             }),
-            smooth: chartType === 'line' || isAreaType,
+            smooth: (chartType === 'line' || isAreaType) && config.smooth !== false,
             itemStyle: { color: seriesColor },
             lineStyle: { color: seriesColor },
             z: 12,
@@ -886,7 +886,9 @@ export default function MultiLayerChart({
         if (horizontal) {
           // Apply yAxis-style options (axisLabel formatter, etc.) onto the
           // X axis since X carries the values now.
-          const valueAxis = { ...yAxis[0] }
+          // The last value label is centred on the right edge and was cut, so it ends at its tick;
+          // without showMaxLabel ECharts drops it as overlapping instead of the label before it
+          const valueAxis = { ...yAxis[0], axisLabel: { ...(yAxis[0]?.axisLabel || {}), alignMaxLabel: 'right', showMaxLabel: true } }
           return { xAxis: valueAxis, yAxis: categoryAxis }
         }
         return { xAxis: categoryAxis, yAxis }

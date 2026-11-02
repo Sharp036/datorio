@@ -544,6 +544,14 @@ export default function PropertyPanel() {
               className="h-3.5 w-3.5" />
             <span className="text-slate-500 dark:text-slate-400">{t('designer.chart_stacked')}</span>
           </label>
+          {(chartCc.type === 'line' || chartCc.type === 'area') && (
+            <label className="inline-flex items-center gap-1.5 text-xs">
+              <input type="checkbox" checked={chartCc.smooth !== false}
+                onChange={e => update({ chartConfig: { ...chartCc, smooth: e.target.checked ? undefined : false } })}
+                className="h-3.5 w-3.5" />
+              <span className="text-slate-500 dark:text-slate-400">{t('designer.smooth')}</span>
+            </label>
+          )}
         </div>
       ),
     },

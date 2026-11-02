@@ -402,6 +402,10 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
   }),
 
   moveWidget: (id, position) => set(state => {
+    // A click on a widget ends a drag by zero cells; it is not a change and adds no undo step
+    const current = state.widgets.find(w => w.id === id)?.position
+    if (current && current.x === position.x && current.y === position.y
+        && current.w === position.w && current.h === position.h) return {}
     const newWidgets = state.widgets.map(w =>
       w.id === id ? { ...w, position } : w
     )
