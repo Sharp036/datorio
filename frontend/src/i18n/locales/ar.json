@@ -75,6 +75,7 @@
   "auth.password": "كلمة المرور",
   "auth.welcome_back": "مرحبًا بعودتك!",
   "auth.invalid_credentials": "بيانات الاعتماد غير صالحة",
+  "auth.server_unavailable": "الخادم غير متاح. حاول مرة أخرى بعد دقيقة",
   "auth.sign_out": "تسجيل الخروج",
   "auth.change_password": "تغيير كلمة المرور",
   "auth.changing": "جارٍ التغيير...",

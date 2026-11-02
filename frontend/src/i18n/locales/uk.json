@@ -75,6 +75,7 @@
   "auth.password": "Пароль",
   "auth.welcome_back": "З поверненням!",
   "auth.invalid_credentials": "Невірні облікові дані",
+  "auth.server_unavailable": "Сервер недоступний. Спробуйте ще раз за хвилину",
   "auth.sign_out": "Вийти",
   "auth.change_password": "Змінити пароль",
   "auth.changing": "Зміна...",

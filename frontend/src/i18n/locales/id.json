@@ -75,6 +75,7 @@
   "auth.password": "Kata sandi",
   "auth.welcome_back": "Selamat datang kembali!",
   "auth.invalid_credentials": "Kredensial tidak valid",
+  "auth.server_unavailable": "Server tidak tersedia. Coba lagi dalam satu menit",
   "auth.sign_out": "Keluar",
   "auth.change_password": "Ubah Kata Sandi",
   "auth.changing": "Mengubah...",

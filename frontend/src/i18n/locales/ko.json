@@ -75,6 +75,7 @@
   "auth.password": "비밀번호",
   "auth.welcome_back": "다시 오신 것을 환영합니다!",
   "auth.invalid_credentials": "잘못된 자격 증명",
+  "auth.server_unavailable": "서버를 사용할 수 없습니다. 1분 후에 다시 시도하세요",
   "auth.sign_out": "로그아웃",
   "auth.change_password": "비밀번호 변경",
   "auth.changing": "변경 중...",

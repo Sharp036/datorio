@@ -79,6 +79,7 @@
   "auth.password": "Password",
   "auth.welcome_back": "Welcome back!",
   "auth.invalid_credentials": "Invalid credentials",
+  "auth.server_unavailable": "The server is not available. Try again in a minute",
   "auth.sign_out": "Sign out",
   "auth.change_password": "Change Password",
   "auth.changing": "Changing...",

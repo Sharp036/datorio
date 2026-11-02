@@ -75,6 +75,7 @@
   "auth.password": "Lösenord",
   "auth.welcome_back": "Välkommen tillbaka!",
   "auth.invalid_credentials": "Ogiltiga inloggningsuppgifter",
+  "auth.server_unavailable": "Servern är inte tillgänglig. Försök igen om en minut",
   "auth.sign_out": "Logga ut",
   "auth.change_password": "Byt lösenord",
   "auth.changing": "Ändrar...",

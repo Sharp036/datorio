@@ -21,7 +21,15 @@ export const useAuthStore = create<AuthState>((set) => ({
     const res = await authApi.login(data)
     localStorage.setItem('accessToken', res.accessToken)
     localStorage.setItem('refreshToken', res.refreshToken)
-    const user = await authApi.me()
+    let user
+    try {
+      user = await authApi.me()
+    } catch (e) {
+      // A login that cannot read its user does not stay half signed in
+      localStorage.removeItem('accessToken')
+      localStorage.removeItem('refreshToken')
+      throw e
+    }
     if (user.language) {
       i18n.changeLanguage(user.language)
       localStorage.setItem('language', user.language)

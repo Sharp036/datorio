@@ -75,6 +75,7 @@
   "auth.password": "Mật khẩu",
   "auth.welcome_back": "Chào mừng trở lại!",
   "auth.invalid_credentials": "Thông tin đăng nhập không hợp lệ",
+  "auth.server_unavailable": "Máy chủ không khả dụng. Vui lòng thử lại sau một phút",
   "auth.sign_out": "Đăng xuất",
   "auth.change_password": "Đổi mật khẩu",
   "auth.changing": "Đang thay đổi...",

@@ -75,6 +75,7 @@
   "auth.password": "Hasło",
   "auth.welcome_back": "Witaj ponownie!",
   "auth.invalid_credentials": "Nieprawidłowe dane logowania",
+  "auth.server_unavailable": "Serwer jest niedostępny. Spróbuj ponownie za minutę",
   "auth.sign_out": "Wyloguj się",
   "auth.change_password": "Zmień hasło",
   "auth.changing": "Zmiana...",

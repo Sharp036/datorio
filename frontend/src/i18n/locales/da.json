@@ -75,6 +75,7 @@
   "auth.password": "Adgangskode",
   "auth.welcome_back": "Velkommen tilbage!",
   "auth.invalid_credentials": "Ugyldige legitimationsoplysninger",
+  "auth.server_unavailable": "Serveren er ikke tilgængelig. Prøv igen om et minut",
   "auth.sign_out": "Log ud",
   "auth.change_password": "Skift adgangskode",
   "auth.changing": "Skifter...",
