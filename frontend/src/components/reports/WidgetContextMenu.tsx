@@ -61,7 +61,7 @@ export default function WidgetContextMenu({ rawSql, datasourceId, data, title, p
         </button>
 
         {open && (
-          <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-dark-surface-50 rounded-xl shadow-xl border border-surface-200 dark:border-dark-surface-100 py-1 z-50">
+          <div className="absolute end-0 top-full mt-1 w-48 bg-white dark:bg-dark-surface-50 rounded-xl shadow-xl border border-surface-200 dark:border-dark-surface-100 py-1 z-50">
             {hasQuery && (
               <button
                 onClick={() => { setOpen(false); setModal('query') }}

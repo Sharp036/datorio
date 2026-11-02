@@ -330,7 +330,8 @@ export default function KpiCard({ data, title, chartConfig }: Props) {
           !isPositive && !isNegative && 'text-slate-500'
         )}>
           {isPositive ? <TrendingUp className="w-4 h-4" /> : isNegative ? <TrendingDown className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
-          {delta > 0 ? '+' : ''}{delta}%
+          {/* In a right-to-left interface the sign would move behind the number */}
+          <span dir="ltr">{delta > 0 ? '+' : ''}{delta}%</span>
         </div>
       )}
       {sparklinePath && (

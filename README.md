@@ -7,6 +7,8 @@
 [![Docker image](https://img.shields.io/badge/docker-ghcr.io%2Fdatorio--bi%2Fdatorio-2496ED?logo=docker&logoColor=white)](https://github.com/datorio-bi/datorio/pkgs/container/datorio)
 [![Open in GitHub Codespaces](https://img.shields.io/badge/Codespaces-try%20in%20the%20browser-181717?logo=github)](https://codespaces.new/datorio-bi/datorio?quickstart=1)
 
+![The example report Sales overview: a parameter panel, KPI cards compared with a year earlier and revenue by month and category](docs/images/dashboard.png)
+
 ## Highlights
 
 ### Run Airflow DAGs from a report
@@ -19,6 +21,8 @@ Put a **Start a job** button on a report, and business users can start an Apache
 - the button can stay unavailable until the required parameters are applied or until a given table shows rows, with the reason shown under it;
 - only DAGs from an allow-list can be started; Datorio talks to the Airflow 3 REST API with a service account.
 
+![The example report Airflow job example: a run in progress under the Start the job button, earlier runs in Job runs and the result of the last run](docs/images/airflow-job.png)
+
 ### Load data from files
 
 An import source describes how a file lands in a PostgreSQL or ClickHouse table:
@@ -29,6 +33,10 @@ An import source describes how a file lands in a PostgreSQL or ClickHouse table:
 - load modes: append, replace, or upsert by key columns;
 - preview before loading, and an import history with row-level errors;
 - upload from the UI, or from scripts and other systems with an API key.
+
+![Preview of the first rows of an Excel file before the import](docs/images/import-preview.png)
+
+<img src="docs/images/import-source.png" alt="Settings of an import source: target table, load mode, strict column set and column mapping with types and date formats" width="480">
 
 ## Features
 
@@ -48,6 +56,20 @@ An import source describes how a file lands in a PostgreSQL or ClickHouse table:
 - Roles (ADMIN, EDITOR, VIEWER, IMPORTER), object-level permissions and sharing, folders, favorites, tags and global search
 - Interface in 28 languages; translation fixes are welcome, see [Translations](#translations). Number and date format chosen apart from the language, the browser's by default. Light and dark themes
 - REST API with OpenAPI documentation (Swagger UI)
+
+## Screenshots
+
+Charts and tables of the example report; a click on a table row filters the dashboard by its region or category:
+
+![Revenue by region and by category, Top 10 products and Regions tables with in-cell bars](docs/images/charts-and-tables.png)
+
+A click on a region bar or a category slice opens its details in place of the chart, with "Back" to return:
+
+![Revenue by month in the South region and revenue by product in the Home category opened in place of the charts](docs/images/drill-down.png)
+
+The report designer with the property panel of a chart:
+
+![The report designer: components on the left, the report canvas and the properties of the selected chart on the right](docs/images/designer.png)
 
 ## Quick start
 

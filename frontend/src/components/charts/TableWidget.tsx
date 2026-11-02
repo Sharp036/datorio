@@ -141,7 +141,7 @@ function renderCellContent(
     return (
       <span className={`inline-flex items-center gap-1 ${colorClass}`}>
         {showArrow && <Icon className="w-3 h-3 shrink-0" aria-hidden="true" />}
-        {Number.isFinite(num) ? `${sign}${num}` : String(rawValue)}
+        <span dir="ltr">{Number.isFinite(num) ? `${sign}${num}` : String(rawValue)}</span>
       </span>
     )
   }
