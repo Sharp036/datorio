@@ -1,0 +1,7 @@
+# Codespaces run the published image of the main branch instead of building it from the sources,
+# which takes several minutes and much of the disk. To run the sources of the current branch:
+#   docker compose -f docker-compose.yml -f examples/airflow/compose.yml up -d --build
+services:
+  datorio:
+    image: ghcr.io/datorio-bi/datorio:latest
+    pull_policy: always
