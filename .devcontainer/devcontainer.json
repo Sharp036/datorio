@@ -1,0 +1,24 @@
+{
+  // GitHub Codespaces: starts Datorio with the sample data and the Airflow example on every start of the
+  // codespace and loads the example reports. Datorio is on port 8080 (admin / admin), Airflow on 8088.
+  "name": "Datorio",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "hostRequirements": {
+    "cpus": 2,
+    "memory": "8gb"
+  },
+  "postCreateCommand": "cp -n .env.example .env",
+  "postStartCommand": "sh .devcontainer/start.sh",
+  "forwardPorts": [8080, 8088],
+  "portsAttributes": {
+    "8080": { "label": "Datorio", "onAutoForward": "notify" },
+    "8088": { "label": "Airflow example", "onAutoForward": "silent" }
+  },
+  "otherPortsAttributes": { "onAutoForward": "ignore" },
+  "customizations": {
+    "codespaces": { "openFiles": ["README.md"] }
+  }
+}

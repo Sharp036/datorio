@@ -5,6 +5,7 @@
 [![CI](https://github.com/datorio-bi/datorio/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/datorio-bi/datorio/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Docker image](https://img.shields.io/badge/docker-ghcr.io%2Fdatorio--bi%2Fdatorio-2496ED?logo=docker&logoColor=white)](https://github.com/datorio-bi/datorio/pkgs/container/datorio)
+[![Open in GitHub Codespaces](https://img.shields.io/badge/Codespaces-try%20in%20the%20browser-181717?logo=github)](https://codespaces.new/datorio-bi/datorio?quickstart=1)
 
 ## Highlights
 
@@ -45,10 +46,18 @@ An import source describes how a file lands in a PostgreSQL or ClickHouse table:
 - Scheduled report snapshots (cron) and data alerts with a history of triggered and resolved events
 - Query caching, performance monitoring and a query advisor
 - Roles (ADMIN, EDITOR, VIEWER, IMPORTER), object-level permissions and sharing, folders, favorites, tags and global search
-- UI in 28 languages, light and dark themes
+- Interface in 28 languages; translation fixes are welcome, see [Translations](#translations). Light and dark themes
 - REST API with OpenAPI documentation (Swagger UI)
 
 ## Quick start
+
+### Try it in the browser
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/datorio-bi/datorio?quickstart=1)
+
+A GitHub Codespace starts Datorio with the sample data, the Airflow example and the example reports by itself, on every start. When the notification about port 8080 appears (a few minutes on the first start), open it and sign in with `admin` / `admin`; the Ports tab lists Datorio (8080) and the Airflow UI (8088). The codespace runs the published image of `main`.
+
+### Run it on your machine
 
 Requirements: Docker with Docker Compose.
 
@@ -175,6 +184,10 @@ npm run dev
 ## Contributing
 
 Bug reports, ideas and pull requests are welcome: open an [issue](https://github.com/datorio-bi/datorio/issues) or a pull request.
+
+### Translations
+
+The interface texts are in [`frontend/src/i18n/locales`](frontend/src/i18n/locales), one JSON file per language; `en.json` is the reference. Many translations have not been read by native speakers yet, so a pull request that fixes a wording in your language is a welcome first contribution. Keep the keys and the `{{placeholders}}` as they are; `python3 .github/scripts/check_locales.py` checks that every locale has the keys and placeholders of `en.json` (CI runs it too).
 
 ## License
 
