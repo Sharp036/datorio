@@ -53,9 +53,11 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} className="card p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{t('auth.username')}</label>
+            {/* The on-screen keyboard of a phone capitalizes the first letter and autocorrects unless told not to */}
             <input
               type="text" value={username} onChange={e => setUsername(e.target.value)}
               className="input" placeholder={t('auth.username')} autoFocus required
+              autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false}
             />
           </div>
 
@@ -65,7 +67,7 @@ export default function LoginPage() {
               <input
                 type={showPassword ? 'text' : 'password'} value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="input pr-10" placeholder="••••••••" required
+                className="input pr-10" placeholder="••••••••" required autoComplete="current-password"
               />
               <button
                 type="button" onClick={() => setShowPassword(!showPassword)}

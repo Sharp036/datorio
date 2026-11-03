@@ -29,7 +29,8 @@ class AuthService(
         )
         SecurityContextHolder.getContext().authentication = authentication
 
-        val user = userRepository.findByUsername(request.username)
+        // The authenticated name is the stored one, whatever case the user typed
+        val user = userRepository.findByUsername(authentication.name)
             .orElseThrow { IllegalArgumentException("User not found") }
 
         val roles = user.roles.map { it.name }
@@ -48,7 +49,7 @@ class AuthService(
 
     @Transactional
     fun register(request: RegisterRequest): UserResponse {
-        require(!userRepository.existsByUsername(request.username)) {
+        require(!userRepository.existsByUsernameIgnoreCase(request.username)) {
             "Username '${request.username}' already exists"
         }
         require(!userRepository.existsByEmail(request.email)) {

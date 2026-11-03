@@ -1,5 +1,6 @@
 package com.datorio.security
 
+import com.datorio.model.User
 import com.datorio.repository.UserRepository
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.userdetails.UserDetails
@@ -13,8 +14,8 @@ class DatorioUserDetailsService(
 ) : UserDetailsService {
 
     override fun loadUserByUsername(username: String): UserDetails {
-        val user = userRepository.findByUsername(username)
-            .orElseThrow { UsernameNotFoundException("User not found: $username") }
+        val user = findUser(username)
+            ?: throw UsernameNotFoundException("User not found: $username")
 
         val authorities = mutableListOf<SimpleGrantedAuthority>()
 
@@ -34,4 +35,9 @@ class DatorioUserDetailsService(
             .disabled(!user.isActive)
             .build()
     }
+
+    // The exact name first; otherwise a name typed in another case or with spaces around it, if only one user has it
+    private fun findUser(username: String): User? =
+        userRepository.findByUsername(username).orElse(null)
+            ?: userRepository.findAllByUsernameIgnoreCase(username.trim()).singleOrNull()
 }

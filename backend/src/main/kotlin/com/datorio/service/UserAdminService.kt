@@ -38,7 +38,8 @@ class UserAdminService(
 
     @Transactional
     fun createUser(request: AdminUserCreateRequest, adminUsername: String): AdminUserListItem {
-        require(!userRepository.existsByUsername(request.username)) {
+        // A name that differs only in case would make the login by that name ambiguous
+        require(!userRepository.existsByUsernameIgnoreCase(request.username)) {
             "Username '${request.username}' already exists"
         }
         require(!userRepository.existsByEmail(request.email)) {

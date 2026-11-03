@@ -12,8 +12,10 @@ import java.util.Optional
 @Repository
 interface UserRepository : JpaRepository<User, Long> {
     fun findByUsername(username: String): Optional<User>
+    fun findAllByUsernameIgnoreCase(username: String): List<User>
     fun findByEmail(email: String): Optional<User>
     fun existsByUsername(username: String): Boolean
+    fun existsByUsernameIgnoreCase(username: String): Boolean
     fun existsByEmail(email: String): Boolean
     fun findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(
         username: String, email: String, pageable: Pageable
