@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { tagApi, TagDto, ObjectTagDto } from '@/api/tagsearch'
-import { Plus, X, Tag } from 'lucide-react'
+import { Plus, X } from 'lucide-react'
 import clsx from 'clsx'
 import toast from 'react-hot-toast'
 

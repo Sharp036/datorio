@@ -357,7 +357,7 @@ export default function MultiLayerChart({
     const cols = data.columns || []
     const rows = data.rows || []
 
-    // Use configured fields or fall back to defaults (match EChartWidget behavior)
+    // Use configured fields or fall back to defaults
     const categoryCol = (config.categoryField as string) || cols[0]
     const categories = rows.map(r => String(r[categoryCol] ?? ''))
 
@@ -376,7 +376,7 @@ export default function MultiLayerChart({
     // labelLayout can dispatch the right layout per series.
     const inlineSeriesIdx = new Set<number>()
 
-    // Display options from chartConfig (match EChartWidget behavior)
+    // Display options from chartConfig
     const yAxisMin = (config.yAxisMin as string) || 'zero'
     const yAxisFormat = (config.yAxisFormat as string) || 'plain'
     const yAxisCurrency = (config.yAxisCurrency as string) || 'USD'
@@ -411,8 +411,7 @@ export default function MultiLayerChart({
     // unconditionally further down via option.graphic.
     const featureGraphics: { delta?: Record<string, unknown>; center?: Record<string, unknown> } = {}
 
-    // Composable bar/line/area variants - same option-based model as
-    // EChartWidget. Replaces standalone stacked_bar/stacked_area/horizontal_bar
+    // Composable bar/line/area variants. Replaces standalone stacked_bar/stacked_area/horizontal_bar
     // chart types. Stacked applies stack:'total' on each series; horizontal
     // swaps the axis types for bar charts only.
     const stacked = !!config.stacked && (chartType === 'bar' || chartType === 'line' || chartType === 'area')
@@ -535,8 +534,7 @@ export default function MultiLayerChart({
       // Chart-feature decorations: thresholdLines, markMinMax + highlightLastPoint
       // (combined into series[0].markPoint), barConditionalColor (per-bar coloring),
       // deltaAnnotation (corner overlay), centerLabel (donut center).
-      // Logic shared with EChartWidget via chartFeatures.ts so designer preview and
-      // runtime stay in sync.
+      // The helpers live in chartFeatures.ts.
       if (series.length > 0) {
         const ml = buildThresholdMarkLine(config, chartType)
         if (ml) series[0] = { ...series[0], ...ml }
@@ -556,7 +554,7 @@ export default function MultiLayerChart({
         // Use layer-specific data if available, otherwise fall back to widget data
         const lData = layerData[layer.id] || data
         const lRows = lData.rows || []
-        const catField = layer.categoryField || categoryCol
+        // Layer rows are matched to the categories by position; layer.categoryField is not used
         const valField = layer.valueField || (lData.columns?.[1])
 
         // Parse seriesConfig overrides

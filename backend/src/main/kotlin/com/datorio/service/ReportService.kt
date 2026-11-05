@@ -46,11 +46,45 @@ class ReportService(
             updatedBy = userId
         )
         val saved = reportRepo.save(report)
+        addContent(saved, request)
 
-        // Create parameters
+        val result = reportRepo.save(saved)
+        log.info("Created report '{}' (id={}) with {} params, {} widgets",
+            result.name, result.id, result.parameters.size, result.widgets.size)
+        return toResponse(result)
+    }
+
+    /**
+     * Replaces the description, layout, settings, parameters and widgets of a report and keeps the report
+     * itself: its id and link, name, folder, owner, access, favorites, schedules and snapshots. Layers,
+     * annotations, tooltips and visibility rules of the old widgets go with them (database cascade).
+     */
+    @Transactional
+    fun replaceContent(reportId: Long, request: CreateReportRequest, userId: Long): ReportResponse {
+        val report = reportRepo.findById(reportId)
+            .orElseThrow { IllegalArgumentException("Report not found: $reportId") }
+        report.description = request.description
+        report.reportType = request.reportType
+        report.layout = request.layout
+        report.settings = request.settings
+        report.parameters.clear()
+        report.widgets.clear()
+        // The old rows go before the new ones are written: parameter names are unique within a report
+        reportRepo.saveAndFlush(report)
+
+        addContent(report, request)
+        report.updatedBy = userId
+        report.updatedAt = Instant.now()
+        val result = reportRepo.saveAndFlush(report)
+        log.info("Replaced the content of report '{}' (id={}) with {} params, {} widgets",
+            result.name, result.id, result.parameters.size, result.widgets.size)
+        return toResponse(result)
+    }
+
+    private fun addContent(report: Report, request: CreateReportRequest) {
         request.parameters.forEachIndexed { idx, paramDto ->
-            val param = ReportParameter(
-                report = saved,
+            report.parameters.add(ReportParameter(
+                report = report,
                 name = paramDto.name,
                 label = paramDto.label,
                 paramType = paramDto.paramType,
@@ -58,14 +92,11 @@ class ReportService(
                 isRequired = paramDto.isRequired,
                 sortOrder = if (paramDto.sortOrder == 0) idx else paramDto.sortOrder,
                 config = paramDto.config
-            )
-            saved.parameters.add(param)
+            ))
         }
-
-        // Create widgets
         request.widgets.forEachIndexed { idx, widgetDto ->
-            val widget = ReportWidget(
-                report = saved,
+            report.widgets.add(ReportWidget(
+                report = report,
                 widgetType = widgetDto.widgetType,
                 title = widgetDto.title,
                 body = widgetDto.body,
@@ -78,14 +109,8 @@ class ReportService(
                 paramMapping = widgetDto.paramMapping,
                 sortOrder = if (widgetDto.sortOrder == 0) idx else widgetDto.sortOrder,
                 isVisible = widgetDto.isVisible
-            )
-            saved.widgets.add(widget)
+            ))
         }
-
-        val result = reportRepo.save(saved)
-        log.info("Created report '{}' (id={}) with {} params, {} widgets",
-            result.name, result.id, result.parameters.size, result.widgets.size)
-        return toResponse(result)
     }
 
     fun resolveReport(idOrSlug: String): Report {

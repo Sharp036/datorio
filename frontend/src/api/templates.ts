@@ -62,7 +62,8 @@ export const templateApi = {
   exportReport: (reportId: number) =>
     api.get<ReportExportConfig>(`/templates/export/${reportId}`).then(r => r.data),
 
-  importReport: (data: { config: ReportExportConfig; name?: string; datasourceId?: number; asTemplate?: boolean; folderId?: number }) =>
+  // targetReportId: replace the content of that report, which keeps its id, link, name and access
+  importReport: (data: { config: ReportExportConfig; name?: string; datasourceId?: number; asTemplate?: boolean; folderId?: number; targetReportId?: number }) =>
     api.post<ImportResult>('/templates/import', data).then(r => r.data),
 
   createFromTemplate: (templateId: number, name: string) =>

@@ -189,7 +189,9 @@ data class ImportReportRequest(
     val name: String? = null,
     val datasourceId: Long? = null,
     val asTemplate: Boolean = false,
-    val folderId: Long? = null
+    val folderId: Long? = null,
+    // Replace the content of this report instead of creating a new one; its id, link, name and access stay
+    val targetReportId: Long? = null
 )
 
 data class ImportResult(

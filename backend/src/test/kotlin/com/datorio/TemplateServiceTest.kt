@@ -118,4 +118,62 @@ class TemplateServiceTest {
         assertNull(button["toggleWidgetSortOrders"])
         assertEquals(listOf(501L), button["toggleWidgetIds"].map { it.asLong() })
     }
+
+    @Test
+    fun `import into an existing report keeps the report and replaces what the file brings`() {
+        val now = Instant.now()
+        val offsetNow = java.time.OffsetDateTime.now()
+        val widgets = listOf(
+            WidgetExportConfig(WidgetType.CHART, "Revenue", null, "SELECT 1", "{}", "{}", "{}", "{}", 0, true),
+            WidgetExportConfig(WidgetType.TABLE, "Products", null, "SELECT 2", "{}", "{}", "{}", "{}", 1, true)
+        )
+        val config = ReportExportConfig(
+            name = "Name in the file", description = "New description", reportType = ReportType.STANDARD,
+            layout = "{}", settings = "{}", category = null,
+            parameters = listOf(ParameterExportConfig("region", "Region", ParamType.STRING, null, false, 0, "{}")),
+            widgets = widgets,
+            actions = listOf(ActionExportConfig("Show products", "DRILL_REPLACE", "CLICK", 0, "1", "Category"))
+        )
+        whenever(reportRepo.existsById(7)).thenReturn(true)
+        whenever(vizService.getContainers(7)).thenReturn(listOf(ContainerResponse(
+            id = 31, reportId = 7, containerType = "TABS", name = null, childWidgetIds = listOf(listOf(101L)),
+            tabNames = emptyList(), activeTab = 0, autoDistribute = false, config = emptyMap(), sortOrder = 0,
+            createdAt = offsetNow)))
+        whenever(interactiveService.getActionsForReport(7)).thenReturn(listOf(action("FILTER", 101, "*")))
+        whenever(controlService.getParameterControls(7)).thenReturn(listOf(ParameterControlResponse(
+            id = 41, reportId = 7, parameterName = "old_param", controlType = "DROPDOWN", datasourceId = 3,
+            optionsQuery = "SELECT 1", sliderMin = null, sliderMax = null, sliderStep = null, config = emptyMap(),
+            sortOrder = 0, createdAt = offsetNow)))
+        val replaced = widgets.mapIndexed { i, w ->
+            WidgetResponse(id = 600L + i, widgetType = w.widgetType, title = w.title, body = null, queryId = null,
+                datasourceId = 3, rawSql = w.rawSql, chartConfig = w.chartConfig, position = w.position, style = w.style,
+                paramMapping = w.paramMapping, sortOrder = w.sortOrder, isVisible = true, createdAt = now, updatedAt = now)
+        }
+        whenever(reportService.replaceContent(eq(7L), any(), any())).thenReturn(ReportResponse(
+            id = 7, slug = "s", name = "Name the users know", description = "New description",
+            reportType = ReportType.STANDARD, layout = "{}", settings = "{}", status = ReportStatus.PUBLISHED,
+            isTemplate = false, thumbnailUrl = null, folderId = 5, parameters = emptyList(), widgets = replaced,
+            createdBy = 1, updatedBy = 2, createdAt = now, updatedAt = now))
+
+        val result = templateService.importReport(
+            ImportReportRequest(config = config, datasourceId = 3, targetReportId = 7), userId = 2)
+
+        assertEquals(7L, result.reportId)
+        assertEquals("Name the users know", result.name)
+        verify(reportService, never()).createReport(any(), any())
+        verify(vizService).deleteContainer(31)
+        verify(interactiveService).deleteAction(1)
+        verify(controlService).deleteParameterControl(7, "old_param")
+        val content = argumentCaptor<CreateReportRequest>()
+        verify(reportService).replaceContent(eq(7L), content.capture(), eq(2L))
+        assertEquals(listOf("region"), content.firstValue.parameters.map { it.name })
+        assertEquals(listOf("Revenue", "Products"), content.firstValue.widgets.map { it.title })
+        assertEquals(listOf(3L, 3L), content.firstValue.widgets.map { it.datasourceId })
+        // The new action points at the new widgets of the same report
+        val actions = argumentCaptor<DashboardActionRequest>()
+        verify(interactiveService).createAction(actions.capture())
+        assertEquals(7L, actions.firstValue.reportId)
+        assertEquals(600L, actions.firstValue.sourceWidgetId)
+        assertEquals("601", actions.firstValue.targetWidgetIds)
+    }
 }

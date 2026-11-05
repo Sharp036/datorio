@@ -3,6 +3,8 @@ name: Datorio BI — CI
 on:
   push:
     branches: [main, develop]
+    # A release tag (v1.2.0) publishes the image as 1.2.0 and 1.2
+    tags: ['v*']
   pull_request:
     branches: [main]
 
@@ -63,6 +65,25 @@ jobs:
           name: test-results
           path: backend/build/reports/tests/
 
+  # Frontend: ESLint (the type check and the build run in the image build)
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+
+      - run: npm run lint
+
   # ── Examples: the quick start stack, the Airflow example DAG and the example reports ──
   examples:
     runs-on: ubuntu-latest
@@ -83,15 +104,25 @@ jobs:
       - name: Render the example reports in Datorio and start the DAG with the report button
         run: python3 .github/scripts/check_examples.py datorio
 
+      - name: Check how the page and the built files are served
+        run: |
+          page=$(curl -fsS -D page_headers.txt http://localhost:8080/reports)
+          grep -qi '^cache-control: no-cache' page_headers.txt
+          js=$(echo "$page" | grep -o '/assets/index-[^"]*\.js' | head -1)
+          test -n "$js"
+          curl -fsS -o /dev/null -D js_headers.txt "http://localhost:8080$js"
+          grep -qi '^cache-control:.*immutable' js_headers.txt
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/assets/missing-file.js)" = 404
+
       - name: Container logs
         if: failure()
         run: docker compose -f docker-compose.yml -f examples/airflow/compose.yml logs --tail 300
 
   # ── Build & Push Docker Image ──
   build:
-    needs: test
+    needs: [test, frontend]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: read
       packages: write
@@ -102,6 +133,18 @@ jobs:
       - name: Lowercase repo name
         id: lower
         run: echo "repo=$(echo '${{ github.repository }}' | tr 'A-Z' 'a-z')" >> $GITHUB_OUTPUT
+
+      # main: latest and the commit; a release tag v1.2.0: 1.2.0 and 1.2
+      - name: Image tags
+        id: tags
+        run: |
+          image="ghcr.io/${{ steps.lower.outputs.repo }}"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            version="${GITHUB_REF_NAME#v}"
+            printf 'list<<EOF\n%s:%s\n%s:%s\nEOF\n' "$image" "$version" "$image" "${version%.*}" >> "$GITHUB_OUTPUT"
+          else
+            printf 'list<<EOF\n%s:latest\n%s:%s\nEOF\n' "$image" "$image" "$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Log in to Container Registry
         uses: docker/login-action@v3
@@ -115,6 +158,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: |
-            ghcr.io/${{ steps.lower.outputs.repo }}:latest
-            ghcr.io/${{ steps.lower.outputs.repo }}:${{ github.sha }}
+          tags: ${{ steps.tags.outputs.list }}

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { ReportParameter } from '@/types'
 import { controlsApi, ParameterControlConfig } from '@/api/controls'
 import NumberInput from '@/components/common/NumberInput'
-import { Play, ChevronDown, ChevronRight } from 'lucide-react'
+import { Play, ChevronDown, ChevronRight, X } from 'lucide-react'
 import clsx from 'clsx'
 import { log } from '@/utils/logger'
 import { groupParameters } from '@/utils/paramConfig'
@@ -621,6 +621,10 @@ function MultiCheckboxControl({ value, options, onChange }: {
     onChange(next.join(','))
   }
 
+  if (options.length > MULTI_CHECKBOX_CHIPS_MAX) {
+    return <SearchableChecklist selected={selected} options={options} onToggle={toggle} onClear={() => onChange('')} />
+  }
+
   return (
     <div className="flex flex-wrap gap-1.5">
       {options.map(opt => (
@@ -637,6 +641,57 @@ function MultiCheckboxControl({ value, options, onChange }: {
           {opt}
         </label>
       ))}
+    </div>
+  )
+}
+
+// Up to this many options a multi-select shows them all as chips; a longer list gets a search box
+const MULTI_CHECKBOX_CHIPS_MAX = 12
+
+/** A long multi-select: the chosen values as removable chips, a search box and a scrolling checklist. */
+function SearchableChecklist({ selected, options, onToggle, onClear }: {
+  selected: string[]; options: string[]; onToggle: (opt: string) => void; onClear: () => void
+}) {
+  const { t } = useTranslation()
+  const [search, setSearch] = useState('')
+  const needle = search.trim().toLocaleLowerCase()
+  const shown = needle ? options.filter(o => o.toLocaleLowerCase().includes(needle)) : options
+
+  return (
+    <div className="space-y-1.5">
+      {selected.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1">
+          {selected.map(opt => (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => onToggle(opt)}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400"
+            >
+              {opt}
+              <X className="w-3 h-3" aria-hidden="true" />
+            </button>
+          ))}
+          <button type="button" onClick={onClear} className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 px-1">
+            {t('common.clear')}
+          </button>
+        </div>
+      )}
+      <input
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        placeholder={t('common.search')}
+        className="input text-sm"
+      />
+      <div className="max-h-48 overflow-y-auto rounded border border-surface-200 dark:border-dark-surface-100 py-1">
+        {shown.map(opt => (
+          <label key={opt} className="flex items-center gap-2 px-2 py-0.5 text-xs cursor-pointer hover:bg-surface-100 dark:hover:bg-dark-surface-100">
+            <input type="checkbox" checked={selected.includes(opt)} onChange={() => onToggle(opt)} className="h-3.5 w-3.5" />
+            <span className="truncate" title={opt}>{opt}</span>
+          </label>
+        ))}
+        {shown.length === 0 && <p className="px-2 py-1 text-xs text-slate-400">{t('common.no_data')}</p>}
+      </div>
     </div>
   )
 }

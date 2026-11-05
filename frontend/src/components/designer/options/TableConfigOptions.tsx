@@ -6,7 +6,7 @@ import { Field, AddColorValueRow, ColorStopsEditor } from '@/components/designer
 
 // TABLE widget configuration: visible columns (with per-column totals + manual
 // ordering), density, page size, totals toggle, conditional row coloring, and
-// per-column cell formatters (heatmap / in-cell bar / delta).
+// per-column cell formatters (heatmap / in-cell bar / delta) and number formats.
 export default function TableConfigOptions({ widget, cc, update, availableCols, previewRows }: {
   widget: DesignerWidget
   cc: Record<string, unknown>
@@ -437,6 +437,85 @@ export default function TableConfigOptions({ widget, cc, update, availableCols, 
                   className="input text-xs"
                 >
                   <option value="">{t('designer.table_add_formatter')}</option>
+                  {remainingCols.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              )}
+            </div>
+          )
+        })()}
+      </Field>
+
+      <Field label={t('designer.number_format')}>
+        {(() => {
+          type NumberFmt = { decimals?: number; grouping?: boolean; prefix?: string; suffix?: string }
+          const formats = (cc.columnNumberFormats as Record<string, NumberFmt>) || {}
+          const setFormat = (col: string, nf: NumberFmt | undefined) => {
+            const next = { ...formats }
+            if (nf === undefined) delete next[col]
+            else next[col] = nf
+            update({ chartConfig: { ...cc, columnNumberFormats: Object.keys(next).length > 0 ? next : undefined } })
+          }
+          const remainingCols = availableCols.filter(c => !(c in formats))
+          const inputClass = 'flex-1 min-w-0 text-xs px-1.5 py-0.5 border border-surface-200 dark:border-dark-surface-100 rounded bg-white dark:bg-dark-surface-50'
+
+          return (
+            <div className="space-y-2">
+              {Object.entries(formats).map(([col, nf]) => (
+                <div key={col} className="border border-surface-200 dark:border-dark-surface-100 rounded p-2 space-y-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-medium text-slate-600 dark:text-slate-300 flex-1 truncate" title={col}>{col}</span>
+                    <button
+                      onClick={() => setFormat(col, undefined)}
+                      className="text-red-500 hover:text-red-700 p-0.5"
+                      title={t('common.delete')}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-slate-500 dark:text-slate-400 w-20">{t('designer.data_label_decimals')}:</span>
+                    <select
+                      value={nf.decimals == null ? '' : String(nf.decimals)}
+                      onChange={e => setFormat(col, { ...nf, decimals: e.target.value === '' ? undefined : Number(e.target.value) })}
+                      className="input text-xs flex-1 py-0.5"
+                    >
+                      <option value="">{t('designer.kpi_decimals_placeholder')}</option>
+                      {[0, 1, 2, 3, 4, 5, 6].map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </div>
+                  <label className="inline-flex items-center gap-1.5 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={nf.grouping !== false}
+                      onChange={e => setFormat(col, { ...nf, grouping: e.target.checked ? undefined : false })}
+                      className="h-3.5 w-3.5"
+                    />
+                    <span className="text-slate-500 dark:text-slate-400">{t('designer.data_label_thousands_sep')}</span>
+                  </label>
+                  <div className="flex items-center gap-1 text-xs">
+                    <input
+                      value={nf.prefix ?? ''}
+                      onChange={e => setFormat(col, { ...nf, prefix: e.target.value || undefined })}
+                      placeholder={t('designer.prefix')}
+                      className={inputClass}
+                    />
+                    <input
+                      value={nf.suffix ?? ''}
+                      onChange={e => setFormat(col, { ...nf, suffix: e.target.value || undefined })}
+                      placeholder={t('designer.suffix')}
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
+              ))}
+
+              {remainingCols.length > 0 && (
+                <select
+                  value=""
+                  onChange={e => { if (e.target.value) setFormat(e.target.value, { decimals: 2 }) }}
+                  className="input text-xs"
+                >
+                  <option value="">{t('designer.table_add_number_format')}</option>
                   {remainingCols.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               )}

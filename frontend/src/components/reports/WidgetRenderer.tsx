@@ -73,7 +73,7 @@ function interpolateTitle(title: string | undefined, data: WidgetData | undefine
 export default function WidgetRenderer({
   widget, layers = [], layerData = {},
   onChartClick, highlightField, highlightValue,
-  drillActions, onDrillDown,
+  onDrillDown,
   reportId, onToggleWidgets, onApplyFilter,
   annotations, tooltipConfig,
   onWidgetDisplay,

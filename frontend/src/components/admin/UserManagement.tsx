@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   adminUserApi, adminRoleApi,
-  AdminUser, RoleListItem, PageResponse
+  AdminUser, RoleListItem
 } from '@/api/admin';
 import { formatLocale } from '@/utils/formatLocale';
 

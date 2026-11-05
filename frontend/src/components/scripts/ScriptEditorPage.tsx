@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Code2, Play, Save, Plus, Trash2, BookOpen, Clock, CheckCircle2, XCircle, ChevronDown } from 'lucide-react'
+import { Code2, Play, Save, Plus, Trash2, BookOpen, CheckCircle2, XCircle } from 'lucide-react'
 import { scriptApi } from '@/api/scripts'
 import type { Script, ScriptSummary, ScriptExecuteResponse } from '@/types'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
@@ -83,7 +83,6 @@ export default function ScriptEditorPage() {
   const [scripts, setScripts] = useState<ScriptSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedId, setSelectedId] = useState<number | null>(null)
-  const [script, setScript] = useState<Script | null>(null)
   const [filterType, setFilterType] = useState<string>('')
   const [search, setSearch] = useState('')
 
@@ -121,7 +120,6 @@ export default function ScriptEditorPage() {
   const loadScript = async (id: number) => {
     try {
       const s = await scriptApi.getById(id)
-      setScript(s)
       setSelectedId(id)
       setName(s.name)
       setDescription(s.description || '')
@@ -137,7 +135,6 @@ export default function ScriptEditorPage() {
 
   const handleNew = () => {
     setSelectedId(null)
-    setScript(null)
     setName('')
     setDescription('')
     setCode(SAMPLE_SCRIPTS.TRANSFORM)
@@ -163,15 +160,13 @@ export default function ScriptEditorPage() {
         toast.success(t('common.created'))
         setSelectedId(created.id)
         setIsNew(false)
-        setScript(created)
       } else if (selectedId) {
-        const updated = await scriptApi.update(selectedId, {
+        await scriptApi.update(selectedId, {
           name, description, code,
           scriptType: scriptType as Script['scriptType'],
           isLibrary
         })
         toast.success(t('scripts.saved'))
-        setScript(updated)
       }
       loadScripts()
     } catch {
@@ -188,7 +183,6 @@ export default function ScriptEditorPage() {
       await scriptApi.delete(selectedId)
       toast.success(t('common.deleted'))
       setSelectedId(null)
-      setScript(null)
       setIsNew(false)
       loadScripts()
     } catch {

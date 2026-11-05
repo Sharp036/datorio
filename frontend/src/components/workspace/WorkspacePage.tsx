@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { workspaceApi, WorkspaceOverview, FolderDto, FolderItemDto } from '@/api/workspace'
+import { workspaceApi, WorkspaceOverview, FolderItemDto } from '@/api/workspace'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
 import {
   Star, Clock, FolderOpen, FileBarChart, Database, LayoutDashboard,
-  Plus, ChevronRight, Trash2, Edit3, MoreHorizontal, X
+  Plus, Trash2, X
 } from 'lucide-react'
 import clsx from 'clsx'
 import toast from 'react-hot-toast'

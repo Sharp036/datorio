@@ -35,6 +35,10 @@ export default function TemplateGalleryPage() {
   const [importDsId, setImportDsId] = useState<number | null>(null)
   const [importAsTemplate, setImportAsTemplate] = useState(false)
   const [importing, setImporting] = useState(false)
+  // Replace the content of an existing report: its ID and the name found for it
+  const [replaceReportId, setReplaceReportId] = useState('')
+  const [replaceReportName, setReplaceReportName] = useState<string | null>(null)
+  const [replaceNameLoading, setReplaceNameLoading] = useState(false)
 
   // Export modal
   const [showExport, setShowExport] = useState(false)
@@ -67,6 +71,20 @@ export default function TemplateGalleryPage() {
     }, 400)
     return () => clearTimeout(timer)
   }, [exportReportId])
+
+  useEffect(() => {
+    const id = Number(replaceReportId)
+    if (!id) { setReplaceReportName(null); return }
+    setReplaceNameLoading(true)
+    setReplaceReportName(null)
+    const timer = setTimeout(() => {
+      reportApi.get(id)
+        .then(r => setReplaceReportName(r.name))
+        .catch(() => setReplaceReportName(null))
+        .finally(() => setReplaceNameLoading(false))
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [replaceReportId])
 
   // ─── Use template ───
   const handleUseTemplate = (tmpl: TemplateItem) => {
@@ -126,6 +144,7 @@ export default function TemplateGalleryPage() {
         }
         setImportConfig(config)
         setImportName(config.name)
+        setReplaceReportId('')
         setShowImport(true)
       } catch { toast.error(t('common.operation_failed')) }
     }
@@ -133,19 +152,22 @@ export default function TemplateGalleryPage() {
     e.target.value = ''
   }
 
+  const replacing = Number(replaceReportId) > 0
   const handleImport = async () => {
     if (!importConfig) return
+    if (replacing && !window.confirm(t('templates.import_replace_confirm', { name: replaceReportName ?? replaceReportId }))) return
     setImporting(true)
     try {
       const result = await templateApi.importReport({
         config: importConfig,
-        name: importName.trim() || undefined,
+        name: replacing ? undefined : importName.trim() || undefined,
         datasourceId: importDsId || undefined,
-        asTemplate: importAsTemplate,
+        asTemplate: replacing ? false : importAsTemplate,
+        targetReportId: replacing ? Number(replaceReportId) : undefined,
       })
-      toast.success(`Imported: ${result.widgetCount} widgets, ${result.parameterCount} params`)
+      toast.success(t('templates.imported', { widgets: result.widgetCount, params: result.parameterCount }))
       setShowImport(false); setImportConfig(null)
-      if (importAsTemplate) load()
+      if (importAsTemplate && !replacing) load()
       else navigate(`/reports/${result.reportId}/edit`)
     } catch { toast.error(t('common.operation_failed')) }
     finally { setImporting(false) }
@@ -163,7 +185,7 @@ export default function TemplateGalleryPage() {
             <Download className="w-4 h-4" /> {t('common.export')}
           </button>
           <button onClick={() => fileInputRef.current?.click()} className="btn-secondary">
-            <Upload className="w-4 h-4" /> Import
+            <Upload className="w-4 h-4" /> {t('common.import')}
           </button>
           <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleFileSelect} />
         </div>
@@ -251,14 +273,14 @@ export default function TemplateGalleryPage() {
               <button onClick={() => { setShowExport(false); setExportReportName(null) }} className="btn-ghost p-1"><X className="w-5 h-5" /></button>
             </div>
             <input type="number" value={exportReportId} onChange={e => setExportReportId(e.target.value)}
-                   placeholder="Report ID" className="input mb-1" autoFocus />
+                   placeholder={t('templates.report_id')} className="input mb-1" autoFocus />
             <div className="h-5 mb-3">
               {exportNameLoading && <p className="text-xs text-slate-400">...</p>}
               {!exportNameLoading && exportReportName && (
                 <p className="text-xs text-brand-600 dark:text-brand-400 font-medium">{exportReportName}</p>
               )}
               {!exportNameLoading && exportReportId && !exportReportName && Number(exportReportId) > 0 && (
-                <p className="text-xs text-red-400">Report not found</p>
+                <p className="text-xs text-red-400">{t('templates.report_not_found')}</p>
               )}
             </div>
             <div className="flex justify-end gap-2">
@@ -276,7 +298,7 @@ export default function TemplateGalleryPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="card w-full max-w-md p-6 mx-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-slate-800 dark:text-white">Import Config</h2>
+              <h2 className="text-lg font-semibold text-slate-800 dark:text-white">{t('templates.import_title')}</h2>
               <button onClick={() => { setShowImport(false); setImportConfig(null) }} className="btn-ghost p-1"><X className="w-5 h-5" /></button>
             </div>
             {/* Preview */}
@@ -288,22 +310,38 @@ export default function TemplateGalleryPage() {
               </p>
             </div>
             <div className="space-y-3">
-              <input value={importName} onChange={e => setImportName(e.target.value)}
-                     placeholder={t('common.name')} className="input" />
+              <input value={importName} onChange={e => setImportName(e.target.value)} disabled={replacing}
+                     placeholder={t('common.name')} className="input disabled:opacity-50" />
               <select value={importDsId || ''} onChange={e => setImportDsId(Number(e.target.value) || null)} className="input">
-                <option value="">No datasource (keep original SQL)</option>
+                <option value="">{t('templates.import_no_datasource')}</option>
                 {datasources.map(ds => <option key={ds.id} value={ds.id}>{ds.name} ({ds.type})</option>)}
               </select>
               <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
-                <input type="checkbox" checked={importAsTemplate} onChange={e => setImportAsTemplate(e.target.checked)}
+                <input type="checkbox" checked={importAsTemplate && !replacing} disabled={replacing}
+                       onChange={e => setImportAsTemplate(e.target.checked)}
                        className="w-4 h-4 rounded border-surface-300" />
-                Import as template (add to gallery)
+                {t('templates.import_as_template')}
               </label>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">{t('templates.import_replace')}</label>
+                <input type="number" value={replaceReportId} onChange={e => setReplaceReportId(e.target.value)}
+                       placeholder={t('templates.report_id')} className="input" />
+                <div className="min-h-5 mt-1">
+                  {replaceNameLoading && <p className="text-xs text-slate-400">...</p>}
+                  {!replaceNameLoading && replaceReportName && (
+                    <p className="text-xs text-brand-600 dark:text-brand-400 font-medium">{replaceReportName}</p>
+                  )}
+                  {!replaceNameLoading && replacing && !replaceReportName && (
+                    <p className="text-xs text-red-400">{t('templates.report_not_found')}</p>
+                  )}
+                </div>
+                {replacing && <p className="text-xs text-slate-500 dark:text-slate-400">{t('templates.import_replace_hint')}</p>}
+              </div>
             </div>
             <div className="flex justify-end gap-2 mt-5">
               <button onClick={() => { setShowImport(false); setImportConfig(null) }} className="btn-secondary">{t('common.cancel')}</button>
-              <button onClick={handleImport} disabled={importing} className="btn-primary">
-                {importing ? t('common.loading') : 'Import'}
+              <button onClick={handleImport} disabled={importing || (replacing && !replaceReportName)} className="btn-primary">
+                {importing ? t('common.loading') : t('common.import')}
               </button>
             </div>
           </div>

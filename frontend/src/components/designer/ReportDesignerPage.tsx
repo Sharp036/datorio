@@ -391,9 +391,7 @@ export default function ReportDesignerPage() {
             name: c.name,
             tabNames: c.tabNames,
             activeTab: 0,
-            childWidgetIds: c.tabGroups.map(g =>
-              g.map(cid => clientIdToServerId.get(cid) ?? -1).filter(id => id !== -1)
-            ),
+            childWidgetIds: resolved,
           })
         }
 

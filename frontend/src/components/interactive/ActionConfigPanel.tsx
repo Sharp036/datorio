@@ -14,14 +14,6 @@ interface Props {
   defaultSourceWidgetId?: number
 }
 
-const actionTypeIcons: Record<string, typeof Filter> = {
-  FILTER: Filter,
-  HIGHLIGHT: Pointer,
-  NAVIGATE: Navigation,
-  URL: ExternalLink,
-  DRILL_REPLACE: Layers,
-}
-
 const triggerTypes = ['CLICK', 'HOVER', 'SELECT']
 
 export default function ActionConfigPanel({ reportId, widgets, defaultSourceWidgetId }: Props) {

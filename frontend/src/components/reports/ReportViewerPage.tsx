@@ -245,11 +245,8 @@ export default function ReportViewerPage() {
   // Table setting chartConfig.clickParams = [{ column, param }]: a row click puts the row values
   // into report parameters and renders the report again with them.
   const applyClickParams = useCallback((chartConfig: string | undefined, row: Record<string, unknown>) => {
-    let mappings: Array<{ column?: string; param?: string }> = []
-    try {
-      const cfg = parseJson(chartConfig, {}) as { clickParams?: Array<{ column?: string; param?: string }> }
-      mappings = Array.isArray(cfg.clickParams) ? cfg.clickParams : []
-    } catch { return }
+    const cfg = parseJson(chartConfig, {}) as { clickParams?: Array<{ column?: string; param?: string }> }
+    const mappings = Array.isArray(cfg.clickParams) ? cfg.clickParams : []
     const overrides: Record<string, unknown> = {}
     for (const m of mappings) {
       if (!m?.column || !m?.param) continue

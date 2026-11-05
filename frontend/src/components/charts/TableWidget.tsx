@@ -43,6 +43,33 @@ interface BarFormatter {
 
 type ColumnFormatter = DeltaFormatter | HeatmapFormatter | BarFormatter
 
+// Number format of a column (chartConfig.columnNumberFormats), applied on top of the formatter.
+interface ColumnNumberFormat {
+  // Fixed digits after the decimal point, 0-6; unset keeps the digits of the value.
+  decimals?: number
+  // Thousands separator of the format locale. Default: true.
+  grouping?: boolean
+  prefix?: string
+  suffix?: string
+}
+
+// A number or a numeric string as databases return decimals and big integers; otherwise null.
+// A code with leading zeros (00123) stays text, as in exports.
+function toFiniteNumber(v: unknown): number | null {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null
+  if (typeof v === 'string' && /^\s*-?(0|[1-9]\d*)(\.\d+)?([eE][-+]?\d+)?\s*$/.test(v)) return Number(v)
+  return null
+}
+
+function formatColumnNumber(num: number, nf: ColumnNumberFormat): string {
+  const d = Number(nf.decimals)
+  const digits = nf.decimals != null && Number.isFinite(d) ? Math.max(0, Math.min(6, Math.round(d))) : undefined
+  const text = num.toLocaleString(formatLocale, digits != null
+    ? { useGrouping: nf.grouping !== false, minimumFractionDigits: digits, maximumFractionDigits: digits }
+    : { useGrouping: nf.grouping !== false, maximumFractionDigits: 20 })
+  return `${nf.prefix ?? ''}${text}${nf.suffix ?? ''}`
+}
+
 function hexToRgb(hex: string): [number, number, number] | null {
   const h = hex.replace('#', '').trim()
   if (h.length !== 6 && h.length !== 3) return null
@@ -123,7 +150,7 @@ function renderCellStyle(
 function renderCellContent(
   fmt: ColumnFormatter | undefined,
   rawValue: unknown,
-  colMax: number | undefined,
+  nf: ColumnNumberFormat | undefined,
 ): ReactNode {
   if (rawValue == null) return <span className="text-slate-400">null</span>
 
@@ -137,11 +164,14 @@ function renderCellContent(
         : 'text-slate-500')
       : ''
     const Icon = num > 0 ? TrendingUp : num < 0 ? TrendingDown : Minus
-    const sign = num > 0 ? '+' : ''
+    // With a number format the sign goes before the prefix: +$1,200.00, -$300.00
+    const text = !Number.isFinite(num) ? String(rawValue)
+      : nf ? `${num > 0 ? '+' : num < 0 ? '-' : ''}${formatColumnNumber(Math.abs(num), nf)}`
+      : `${num > 0 ? '+' : ''}${num}`
     return (
       <span className={`inline-flex items-center gap-1 ${colorClass}`}>
         {showArrow && <Icon className="w-3 h-3 shrink-0" aria-hidden="true" />}
-        <span dir="ltr">{Number.isFinite(num) ? `${sign}${num}` : String(rawValue)}</span>
+        <span dir="ltr">{text}</span>
       </span>
     )
   }
@@ -153,13 +183,15 @@ function renderCellContent(
     const num = Number(rawValue)
     return (
       <span className="tabular-nums">
-        {Number.isFinite(num) ? num.toLocaleString(formatLocale) : String(rawValue)}
+        {!Number.isFinite(num) ? String(rawValue)
+          : nf ? formatColumnNumber(num, nf) : num.toLocaleString(formatLocale)}
       </span>
     )
   }
 
   // Default / heatmap text (style is applied via renderCellStyle).
-  return String(rawValue)
+  const num = toFiniteNumber(rawValue)
+  return nf && num != null ? formatColumnNumber(num, nf) : String(rawValue)
 }
 
 const DENSITY_CONFIG = {
@@ -243,6 +275,11 @@ export default function TableWidget({ data, title, chartConfig, onRowClick, clic
     const raw = config.columnFormatters as Record<string, ColumnFormatter> | undefined
     return raw && typeof raw === 'object' ? raw : {}
   }, [config.columnFormatters])
+
+  const numberFormats = useMemo(() => {
+    const raw = config.columnNumberFormats as Record<string, ColumnNumberFormat> | undefined
+    return raw && typeof raw === 'object' ? raw : {}
+  }, [config.columnNumberFormats])
 
   // Pre-compute column max absolute value for 'bar' formatters with max='auto'.
   // Also used as the heatmap normalization hint when colorStops lie in 0..1.
@@ -374,7 +411,7 @@ export default function TableWidget({ data, title, chartConfig, onRowClick, clic
                   <th
                     key={col}
                     onClick={() => handleSort(col)}
-                    className={`${cellPad} text-left font-medium whitespace-nowrap cursor-pointer select-none hover:text-slate-800 dark:hover:text-slate-200 ${
+                    className={`${cellPad} ${numberFormats[col] ? 'text-end' : 'text-start'} font-medium whitespace-nowrap cursor-pointer select-none hover:text-slate-800 dark:hover:text-slate-200 ${
                       isActive ? 'text-brand-600 dark:text-brand-400' : 'text-slate-600 dark:text-slate-400'
                     }`}
                   >
@@ -428,9 +465,9 @@ export default function TableWidget({ data, title, chartConfig, onRowClick, clic
                       <td
                         key={col}
                         style={renderCellStyle(fmt, rawValue, columnMax[col], baseBg)}
-                        className={`${cellPad} whitespace-nowrap text-slate-700 dark:text-slate-300`}
+                        className={`${cellPad} whitespace-nowrap text-slate-700 dark:text-slate-300${numberFormats[col] ? ' text-end tabular-nums' : ''}`}
                       >
-                        {renderCellContent(fmt, rawValue, columnMax[col])}
+                        {renderCellContent(fmt, rawValue, numberFormats[col])}
                       </td>
                     )
                   })}
@@ -450,20 +487,25 @@ export default function TableWidget({ data, title, chartConfig, onRowClick, clic
                     const values = allRows.map(r => Number(r[col])).filter(n => !isNaN(n))
                     const isNumeric = values.length > 0 && values.length >= allRows.length * 0.5
                     let result = ''
+                    // Counts stay plain; sums, averages and extremes take the number format of the column
+                    const nf = numberFormats[col]
+                    const fmtTotal = (n: number, avg = false) => nf
+                      ? formatColumnNumber(n, avg && nf.decimals == null ? { ...nf, decimals: 2 } : nf)
+                      : n.toLocaleString(formatLocale, avg ? { maximumFractionDigits: 2 } : undefined)
                     if (isNumeric && values.length > 0) {
                       switch (agg) {
-                        case 'SUM': result = values.reduce((a, b) => a + b, 0).toLocaleString(formatLocale); break
+                        case 'SUM': result = fmtTotal(values.reduce((a, b) => a + b, 0)); break
                         case 'COUNT': result = String(allRows.length); break
                         case 'DISTINCT_COUNT': result = String(new Set(allRows.map(r => r[col])).size); break
-                        case 'AVG': result = (values.reduce((a, b) => a + b, 0) / values.length).toLocaleString(formatLocale, { maximumFractionDigits: 2 }); break
-                        case 'MIN': result = Math.min(...values).toLocaleString(formatLocale); break
-                        case 'MAX': result = Math.max(...values).toLocaleString(formatLocale); break
+                        case 'AVG': result = fmtTotal(values.reduce((a, b) => a + b, 0) / values.length, true); break
+                        case 'MIN': result = fmtTotal(Math.min(...values)); break
+                        case 'MAX': result = fmtTotal(Math.max(...values)); break
                       }
                     } else if (ci === 0) {
                       result = t('common.total')
                     }
                     return (
-                      <td key={col} className={`${cellPad} whitespace-nowrap font-semibold text-slate-800 dark:text-slate-200`}>
+                      <td key={col} className={`${cellPad} whitespace-nowrap font-semibold text-slate-800 dark:text-slate-200${nf ? ' text-end tabular-nums' : ''}`}>
                         {result}
                       </td>
                     )
