@@ -5,7 +5,7 @@ import { modelingApi, type DataModelDetail, type ModelFieldItem, type ExploreRes
 import LoadingSpinner from '@/components/common/LoadingSpinner'
 import TableWidget from '@/components/charts/TableWidget'
 import {
-  Play, X, ArrowUpDown, Filter, GripVertical, ChevronDown,
+  Play, X, ArrowUpDown, Filter, ChevronDown,
   Type, Hash, Calendar, Table2, Code2, Boxes
 } from 'lucide-react'
 import toast from 'react-hot-toast'

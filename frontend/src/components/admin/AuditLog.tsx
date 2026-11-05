@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { auditLogApi, AuditLogEntry, PageResponse } from '@/api/admin';
+import { auditLogApi, AuditLogEntry } from '@/api/admin';
 import { formatLocale } from '@/utils/formatLocale';
 
 const ACTION_COLORS: Record<string, string> = {

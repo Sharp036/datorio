@@ -250,7 +250,8 @@ class TemplateService(
             }
         )
 
-        val created = reportService.createReport(createReq, userId)
+        val created = req.targetReportId?.let { replaceReport(it, createReq, userId) }
+            ?: reportService.createReport(createReq, userId)
 
         // Build sortOrder -> new widget ID map to resolve container child references
         val sortOrderToWidgetId: Map<Int, Long> = created.widgets.associate { it.sortOrder to it.id }
@@ -392,15 +393,31 @@ class TemplateService(
         }
 
         log.info("Imported report '{}' (id={}, widgets={}, params={}, controls={}, layers={}, actions={}, overlays={})",
-            reportName, created.id, created.widgets.size, created.parameters.size,
+            created.name, created.id, created.widgets.size, created.parameters.size,
             cfg.parameterControls.size, totalLayers, cfg.actions.size, cfg.overlays.size)
 
         return ImportResult(
             reportId = created.id,
-            name = reportName,
+            name = created.name,
             widgetCount = created.widgets.size,
             parameterCount = created.parameters.size
         )
+    }
+
+    /**
+     * Import into an existing report: what the file brings anew (parameters and their controls, widgets,
+     * containers, dashboard actions, overlays) replaces what the report had, and the report keeps its id
+     * and link, name, folder, owner, access, favorites, schedules and snapshots.
+     */
+    private fun replaceReport(reportId: Long, createReq: CreateReportRequest, userId: Long): ReportResponse {
+        require(reportRepo.existsById(reportId)) { "Report not found: $reportId" }
+        vizService.getContainers(reportId).forEach { vizService.deleteContainer(it.id) }
+        interactiveService.getActionsForReport(reportId).forEach { interactiveService.deleteAction(it.id) }
+        interactiveService.getOverlaysForReport(reportId).forEach { interactiveService.deleteOverlay(it.id) }
+        controlService.getParameterControls(reportId).forEach {
+            controlService.deleteParameterControl(reportId, it.parameterName)
+        }
+        return reportService.replaceContent(reportId, createReq, userId)
     }
 
     // ═══════════════════════════════════════════

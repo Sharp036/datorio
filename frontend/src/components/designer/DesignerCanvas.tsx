@@ -282,7 +282,7 @@ function ContainerBlock({
 // ── Widget block ──────────────────────────────────────────────────────────────
 
 function WidgetBlock({
-  widget, parameters, selectedId, onSelect, previewMode, insideContainer, rowRelative,
+  widget, parameters, selectedId, onSelect, previewMode, rowRelative,
 }: {
   widget: DesignerWidget
   parameters: Array<{ name: string; paramType: string; defaultValue: string }>

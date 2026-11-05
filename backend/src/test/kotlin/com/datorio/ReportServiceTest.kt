@@ -115,6 +115,52 @@ class ReportServiceTest {
     }
 
     @Nested
+    inner class ReplaceContent {
+
+        @Test
+        fun `keeps the report and replaces its parameters and widgets`() {
+            val report = Report(id = 7, name = "Name the users know", description = "Old", folderId = 5)
+            report.parameters.add(ReportParameter(report = report, name = "old_param", paramType = ParamType.STRING))
+            report.widgets.add(ReportWidget(id = 101, report = report, widgetType = WidgetType.CHART, title = "Old chart"))
+            whenever(reportRepo.findById(7)).thenReturn(Optional.of(report))
+            val flushed = mutableListOf<List<String>>()
+            whenever(reportRepo.saveAndFlush(any<Report>())).thenAnswer { invocation ->
+                val r = invocation.getArgument<Report>(0)
+                flushed.add(r.parameters.map { it.name } + r.widgets.map { it.title ?: "" })
+                r
+            }
+
+            val result = reportService.replaceContent(7, CreateReportRequest(
+                name = "Name in the file", description = "New", layout = """{"cols":24}""",
+                parameters = listOf(ReportParameterDto(name = "region", label = "Region", paramType = ParamType.SELECT)),
+                widgets = listOf(
+                    CreateWidgetRequest(widgetType = WidgetType.TABLE, title = "Products", sortOrder = 0),
+                    CreateWidgetRequest(widgetType = WidgetType.CHART, title = "Revenue", sortOrder = 1)
+                )
+            ), userId = 2L)
+
+            // The old rows are flushed away before the new ones are written (parameter names are unique)
+            assertEquals(listOf(emptyList<String>(), listOf("region", "Products", "Revenue")), flushed)
+            assertEquals(7L, result.id)
+            assertEquals("Name the users know", result.name)
+            assertEquals(5L, result.folderId)
+            assertEquals("New", result.description)
+            assertEquals("""{"cols":24}""", result.layout)
+            assertEquals(listOf("region"), result.parameters.map { it.name })
+            assertEquals(listOf("Products", "Revenue"), result.widgets.map { it.title })
+            assertEquals(2L, report.updatedBy)
+        }
+
+        @Test
+        fun `fails for a report that does not exist`() {
+            whenever(reportRepo.findById(8)).thenReturn(Optional.empty())
+            assertThrows<IllegalArgumentException> {
+                reportService.replaceContent(8, CreateReportRequest(name = "x"), userId = 2L)
+            }
+        }
+    }
+
+    @Nested
     inner class GetAndList {
 
         @Test

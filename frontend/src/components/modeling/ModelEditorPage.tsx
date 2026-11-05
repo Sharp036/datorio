@@ -1,12 +1,12 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { modelingApi, type DataModelDetail, type ModelTableItem, type ModelFieldItem, type ModelRelationshipItem } from '@/api/modeling'
+import { modelingApi, type DataModelDetail, type ModelFieldItem } from '@/api/modeling'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
 import {
   Boxes, Plus, Trash2, ChevronDown, ChevronRight, ArrowRight,
-  Download, Upload, Play, Table2, Hash, Calendar, Type, ToggleLeft, Eye, EyeOff,
-  Link2, Unlink
+  Download, Upload, Play, Table2, Hash, Calendar, Type, Eye, EyeOff,
+  Unlink
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 

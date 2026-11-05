@@ -42,17 +42,17 @@ An import source describes how a file lands in a PostgreSQL or ClickHouse table:
 
 **Reports and dashboards**
 - Drag-and-drop report designer on Apache ECharts: bar, line, area, pie, scatter, funnel, gauge, heatmap, radar, sankey, treemap, boxplot, candlestick, waterfall, KPI cards and tables
-- Parameter panel with required fields and collapsible groups, global filters, cross-filtering, drill-down between reports with parameter passing
-- Interactive dashboards: chart layers, dynamic zones, overlays, containers, annotations, rich tooltips, buttons that navigate, show or hide widgets, filter, export, open a URL or run a job
+- Parameter panel with required fields and collapsible groups, cross-filtering, drill-down between reports with parameter passing
+- Interactive dashboards: chart layers, dynamic zones, containers, rich tooltips, buttons that navigate, show or hide widgets, filter, export, open a URL or run a job; reports also show overlays and annotations created through the API or a report import
 - Data modeling layer: a semantic model with automatic joins and an Explore view
-- Calculated fields, bookmarks, templates exported and imported as JSON
+- Calculated fields, bookmarks, reports and templates exported and imported as JSON; an import can replace the content of an existing report, which keeps its link, access and schedules
 - Live updates over Server-Sent Events
 - Server-side JavaScript (sandboxed GraalJS) to transform chart data
 
 **Sharing and operations**
 - Export to CSV, Excel and PDF, send a report by email, embed reports with tokens
-- Scheduled report snapshots (cron) and data alerts with a history of triggered and resolved events
-- Query caching, performance monitoring and a query advisor
+- Scheduled reports (cron) emailed to their recipients, and data alerts by email or webhook with a history of triggered and resolved events
+- Performance monitoring and a query advisor
 - Roles (ADMIN, EDITOR, VIEWER, IMPORTER), object-level permissions and sharing, folders, favorites, tags and global search
 - Interface in 28 languages; translation fixes are welcome, see [Translations](#translations). Number and date format chosen apart from the language, the browser's by default. Light and dark themes
 - REST API with OpenAPI documentation (Swagger UI)
@@ -113,7 +113,7 @@ It reads `ADMIN_USER`, `ADMIN_PASSWORD`, `APP_PORT` and `CH_PASSWORD` from `.env
 
 The API documentation is at http://localhost:8080/api/docs/swagger.
 
-A ready image of the `main` branch is published as `ghcr.io/datorio-bi/datorio:latest`.
+A ready image of the `main` branch is published as `ghcr.io/datorio-bi/datorio:latest`, and each release as its version, for example `ghcr.io/datorio-bi/datorio:1.1.0`.
 
 ## Connect Apache Airflow
 

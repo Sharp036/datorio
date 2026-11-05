@@ -1,34 +1,20 @@
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 
+// English is bundled as the fallback; every other locale is a separate file loaded when chosen
 import en from './locales/en.json'
-import ru from './locales/ru.json'
-import de from './locales/de.json'
-import fr from './locales/fr.json'
-import es from './locales/es.json'
-import pt from './locales/pt.json'
-import zh from './locales/zh.json'
-import ja from './locales/ja.json'
-import ko from './locales/ko.json'
-import ar from './locales/ar.json'
-import hi from './locales/hi.json'
-import it from './locales/it.json'
-import nl from './locales/nl.json'
-import pl from './locales/pl.json'
-import tr from './locales/tr.json'
-import sv from './locales/sv.json'
-import cs from './locales/cs.json'
-import uk from './locales/uk.json'
-import vi from './locales/vi.json'
-import th from './locales/th.json'
-import id from './locales/id.json'
-import ro from './locales/ro.json'
-import hu from './locales/hu.json'
-import el from './locales/el.json'
-import fi from './locales/fi.json'
-import da from './locales/da.json'
-import no from './locales/no.json'
-import he from './locales/he.json'
+
+const localeLoaders = import.meta.glob<{ default: Record<string, string> }>(['./locales/*.json', '!./locales/en.json'])
+
+const lazyLocales = {
+  type: 'backend' as const,
+  init() {},
+  read(language: string, _namespace: string, callback: (error: unknown, data?: Record<string, string>) => void) {
+    const load = localeLoaders[`./locales/${language}.json`]
+    if (!load) { callback(null, {}); return }
+    load().then(module => callback(null, module.default), error => callback(error))
+  },
+}
 
 export interface SupportedLanguage {
   code: string
@@ -71,39 +57,13 @@ const savedLang = localStorage.getItem('language')
 const browserLang = navigator.language.split('-')[0]
 const initialLang = savedLang || (SUPPORTED_LANGUAGES.some(l => l.code === browserLang) ? browserLang : 'en')
 
-i18n
+// Resolves when the initial language is loaded (or failed to load and English is shown)
+export const i18nReady = i18n
+  .use(lazyLocales)
   .use(initReactI18next)
   .init({
-    resources: {
-      en: { translation: en },
-      ru: { translation: ru },
-      de: { translation: de },
-      fr: { translation: fr },
-      es: { translation: es },
-      pt: { translation: pt },
-      zh: { translation: zh },
-      ja: { translation: ja },
-      ko: { translation: ko },
-      ar: { translation: ar },
-      hi: { translation: hi },
-      it: { translation: it },
-      nl: { translation: nl },
-      pl: { translation: pl },
-      tr: { translation: tr },
-      sv: { translation: sv },
-      cs: { translation: cs },
-      uk: { translation: uk },
-      vi: { translation: vi },
-      th: { translation: th },
-      id: { translation: id },
-      ro: { translation: ro },
-      hu: { translation: hu },
-      el: { translation: el },
-      fi: { translation: fi },
-      da: { translation: da },
-      no: { translation: no },
-      he: { translation: he },
-    },
+    resources: { en: { translation: en } },
+    partialBundledLanguages: true,
     lng: initialLang,
     fallbackLng: 'en',
     interpolation: { escapeValue: false },

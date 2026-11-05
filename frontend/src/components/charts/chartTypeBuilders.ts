@@ -252,7 +252,7 @@ export function buildSankey(data: WidgetData, config: ChartConfig): BuildResult 
 //  Boxplot
 // ═══════════════════════════════════════════
 
-export function buildBoxplot(data: WidgetData, config: ChartConfig): BuildResult {
+export function buildBoxplot(data: WidgetData, _config: ChartConfig): BuildResult {
   const { rows, categoryCol, categories, valueCols } = getCols(data)
 
   // Group numeric values by category
@@ -302,7 +302,7 @@ function quantile(sorted: number[], q: number): number {
 // ═══════════════════════════════════════════
 
 export function buildWaterfall(data: WidgetData, config: ChartConfig): BuildResult {
-  const { rows, categoryCol, categories, valueCols } = getCols(data)
+  const { rows, categories, valueCols } = getCols(data)
   const valueCol = valueCols[0]
 
   const values = rows.map(r => Number(r[valueCol]) || 0)
@@ -408,7 +408,7 @@ export function buildCandlestick(data: WidgetData, config: ChartConfig): BuildRe
 // ═══════════════════════════════════════════
 
 export function buildHorizontalBar(data: WidgetData, config: ChartConfig): BuildResult {
-  const { rows, categoryCol, categories, valueCols } = getCols(data)
+  const { rows, categories, valueCols } = getCols(data)
 
   const series = valueCols.map(col => ({
     name: col, type: 'bar',
@@ -430,7 +430,7 @@ export function buildHorizontalBar(data: WidgetData, config: ChartConfig): Build
 // ═══════════════════════════════════════════
 
 export function buildStacked(data: WidgetData, config: ChartConfig, baseType: 'bar' | 'line' = 'bar'): BuildResult {
-  const { rows, categoryCol, categories, valueCols } = getCols(data)
+  const { rows, categories, valueCols } = getCols(data)
 
   const series = valueCols.map(col => ({
     name: col,

@@ -1,8 +1,6 @@
 /**
- * Shared chart-customization helpers used by both EChartWidget (designer
- * preview) and MultiLayerChart (runtime). Keeping the logic here avoids the
- * earlier divergence where a feature added to one rendering component would
- * silently no-op in the other.
+ * Chart-customization helpers of MultiLayerChart, which draws the charts of
+ * reports and of the designer canvas.
  *
  * Convention: most helpers return a partial ECharts series patch or graphic
  * element so the caller can spread/append into its own structures. Only
