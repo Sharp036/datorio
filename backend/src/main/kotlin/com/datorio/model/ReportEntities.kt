@@ -72,10 +72,13 @@ class Report(
     @Column(name = "updated_at", nullable = false)
     var updatedAt: Instant = Instant.now(),
 
+    // Loaded in sortOrder: without it the rows come in table order, which changes once the content is replaced
     @OneToMany(mappedBy = "report", cascade = [CascadeType.ALL], orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderBy("sortOrder ASC")
     val parameters: MutableList<ReportParameter> = mutableListOf(),
 
     @OneToMany(mappedBy = "report", cascade = [CascadeType.ALL], orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderBy("sortOrder ASC")
     val widgets: MutableList<ReportWidget> = mutableListOf()
 )
 

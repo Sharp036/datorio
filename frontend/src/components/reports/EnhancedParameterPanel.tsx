@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { ReportParameter } from '@/types'
 import { controlsApi, ParameterControlConfig } from '@/api/controls'
 import NumberInput from '@/components/common/NumberInput'
-import { Play, ChevronDown, ChevronRight, X } from 'lucide-react'
+import { Play, ChevronDown, ChevronRight } from 'lucide-react'
 import clsx from 'clsx'
 import { log } from '@/utils/logger'
 import { groupParameters } from '@/utils/paramConfig'
@@ -287,7 +287,12 @@ export default function EnhancedParameterPanel({
               setColumnByParam(prev => ({ ...prev, [c.parameterName]: result.columnName! }))
             }
             // Decide new value for dependent parameter
-            if (prevValue && result.options.includes(prevValue)) {
+            if (c.controlType === 'MULTI_CHECKBOX') {
+              // A multi-select keeps the chosen values that are still offered and drops the rest
+              const kept = prevValue.split(',').map(s => s.trim()).filter(v => v && result.options.includes(v))
+              log.filter('cascade multi keep', { param: c.parameterName, prevValue, kept })
+              setValues(v => ({ ...v, [c.parameterName]: kept.join(',') }))
+            } else if (prevValue && result.options.includes(prevValue)) {
               log.filter('cascade keep', { param: c.parameterName, prevValue })
             } else if (result.options.length > 0) {
               // Priority: last user selection > default value > first option (required) > empty
@@ -622,7 +627,12 @@ function MultiCheckboxControl({ value, options, onChange }: {
   }
 
   if (options.length > MULTI_CHECKBOX_CHIPS_MAX) {
-    return <SearchableChecklist selected={selected} options={options} onToggle={toggle} onClear={() => onChange('')} />
+    return (
+      <SearchableChecklist
+        selected={selected} options={options} onToggle={toggle}
+        onSelect={next => onChange(next.join(','))}
+      />
+    )
   }
 
   return (
@@ -648,41 +658,42 @@ function MultiCheckboxControl({ value, options, onChange }: {
 // Up to this many options a multi-select shows them all as chips; a longer list gets a search box
 const MULTI_CHECKBOX_CHIPS_MAX = 12
 
-/** A long multi-select: the chosen values as removable chips, a search box and a scrolling checklist. */
-function SearchableChecklist({ selected, options, onToggle, onClear }: {
-  selected: string[]; options: string[]; onToggle: (opt: string) => void; onClear: () => void
+/** A long multi-select: a search box and a scrolling checklist whose ticks say what is chosen (no chips:
+ *  a few hundred chosen values would push the list away). "All", "None" and "Invert" act on the shown
+ *  options only, so a search narrows what they touch. */
+function SearchableChecklist({ selected, options, onToggle, onSelect }: {
+  selected: string[]; options: string[]; onToggle: (opt: string) => void; onSelect: (next: string[]) => void
 }) {
   const { t } = useTranslation()
   const [search, setSearch] = useState('')
   const needle = search.trim().toLocaleLowerCase()
   const shown = needle ? options.filter(o => o.toLocaleLowerCase().includes(needle)) : options
+  const shownSet = new Set(shown)
+  const keepOrder = (next: Set<string>) => options.filter(o => next.has(o))
+  const selectShown = () => onSelect(keepOrder(new Set([...selected, ...shown])))
+  const deselectShown = () => onSelect(selected.filter(o => !shownSet.has(o)))
+  const invertShown = () => {
+    const chosen = new Set(selected)
+    shown.forEach(o => chosen.has(o) ? chosen.delete(o) : chosen.add(o))
+    onSelect(keepOrder(chosen))
+  }
+  const bulkButton = 'text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 px-1'
 
   return (
     <div className="space-y-1.5">
-      {selected.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1">
-          {selected.map(opt => (
-            <button
-              key={opt}
-              type="button"
-              onClick={() => onToggle(opt)}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400"
-            >
-              {opt}
-              <X className="w-3 h-3" aria-hidden="true" />
-            </button>
-          ))}
-          <button type="button" onClick={onClear} className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 px-1">
-            {t('common.clear')}
-          </button>
-        </div>
-      )}
       <input
         value={search}
         onChange={e => setSearch(e.target.value)}
         placeholder={t('common.search')}
         className="input text-sm"
       />
+      {shown.length > 0 && (
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={selectShown} className={bulkButton}>{t('common.select_all')}</button>
+          <button type="button" onClick={deselectShown} className={bulkButton}>{t('common.deselect_all')}</button>
+          <button type="button" onClick={invertShown} className={bulkButton}>{t('common.invert')}</button>
+        </div>
+      )}
       <div className="max-h-48 overflow-y-auto rounded border border-surface-200 dark:border-dark-surface-100 py-1">
         {shown.map(opt => (
           <label key={opt} className="flex items-center gap-2 px-2 py-0.5 text-xs cursor-pointer hover:bg-surface-100 dark:hover:bg-dark-surface-100">
