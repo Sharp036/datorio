@@ -622,7 +622,12 @@ function MultiCheckboxControl({ value, options, onChange }: {
   }
 
   if (options.length > MULTI_CHECKBOX_CHIPS_MAX) {
-    return <SearchableChecklist selected={selected} options={options} onToggle={toggle} onClear={() => onChange('')} />
+    return (
+      <SearchableChecklist
+        selected={selected} options={options} onToggle={toggle}
+        onSelect={next => onChange(next.join(','))} onClear={() => onChange('')}
+      />
+    )
   }
 
   return (
@@ -648,14 +653,26 @@ function MultiCheckboxControl({ value, options, onChange }: {
 // Up to this many options a multi-select shows them all as chips; a longer list gets a search box
 const MULTI_CHECKBOX_CHIPS_MAX = 12
 
-/** A long multi-select: the chosen values as removable chips, a search box and a scrolling checklist. */
-function SearchableChecklist({ selected, options, onToggle, onClear }: {
-  selected: string[]; options: string[]; onToggle: (opt: string) => void; onClear: () => void
+/** A long multi-select: the chosen values as removable chips, a search box and a scrolling checklist.
+ *  "All", "None" and "Invert" act on the shown options only, so a search narrows what they touch. */
+function SearchableChecklist({ selected, options, onToggle, onSelect, onClear }: {
+  selected: string[]; options: string[]; onToggle: (opt: string) => void
+  onSelect: (next: string[]) => void; onClear: () => void
 }) {
   const { t } = useTranslation()
   const [search, setSearch] = useState('')
   const needle = search.trim().toLocaleLowerCase()
   const shown = needle ? options.filter(o => o.toLocaleLowerCase().includes(needle)) : options
+  const shownSet = new Set(shown)
+  const keepOrder = (next: Set<string>) => options.filter(o => next.has(o))
+  const selectShown = () => onSelect(keepOrder(new Set([...selected, ...shown])))
+  const deselectShown = () => onSelect(selected.filter(o => !shownSet.has(o)))
+  const invertShown = () => {
+    const chosen = new Set(selected)
+    shown.forEach(o => chosen.has(o) ? chosen.delete(o) : chosen.add(o))
+    onSelect(keepOrder(chosen))
+  }
+  const bulkButton = 'text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 px-1'
 
   return (
     <div className="space-y-1.5">
@@ -683,6 +700,13 @@ function SearchableChecklist({ selected, options, onToggle, onClear }: {
         placeholder={t('common.search')}
         className="input text-sm"
       />
+      {shown.length > 0 && (
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={selectShown} className={bulkButton}>{t('common.select_all')}</button>
+          <button type="button" onClick={deselectShown} className={bulkButton}>{t('common.deselect_all')}</button>
+          <button type="button" onClick={invertShown} className={bulkButton}>{t('common.invert')}</button>
+        </div>
+      )}
       <div className="max-h-48 overflow-y-auto rounded border border-surface-200 dark:border-dark-surface-100 py-1">
         {shown.map(opt => (
           <label key={opt} className="flex items-center gap-2 px-2 py-0.5 text-xs cursor-pointer hover:bg-surface-100 dark:hover:bg-dark-surface-100">
