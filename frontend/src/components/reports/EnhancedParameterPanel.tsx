@@ -287,7 +287,12 @@ export default function EnhancedParameterPanel({
               setColumnByParam(prev => ({ ...prev, [c.parameterName]: result.columnName! }))
             }
             // Decide new value for dependent parameter
-            if (prevValue && result.options.includes(prevValue)) {
+            if (c.controlType === 'MULTI_CHECKBOX') {
+              // A multi-select keeps the chosen values that are still offered and drops the rest
+              const kept = prevValue.split(',').map(s => s.trim()).filter(v => v && result.options.includes(v))
+              log.filter('cascade multi keep', { param: c.parameterName, prevValue, kept })
+              setValues(v => ({ ...v, [c.parameterName]: kept.join(',') }))
+            } else if (prevValue && result.options.includes(prevValue)) {
               log.filter('cascade keep', { param: c.parameterName, prevValue })
             } else if (result.options.length > 0) {
               // Priority: last user selection > default value > first option (required) > empty
