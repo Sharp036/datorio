@@ -150,6 +150,16 @@ export default function ReportViewerPage() {
     if (!rId) return
     log.render('renderWithParams', { reportId: rId, params: paramsToUse, drillTargetIds: opts?.drillTargetIds })
     setRendering(true)
+    // A render of the whole report starts from a blank page: the data widgets lose their rows until the new
+    // ones arrive, so nobody reads or acts on the old numbers meanwhile (a RUN_JOB button stays blocked too)
+    if (!opts?.onlyDrillTargets) {
+      setRenderResult(prev => prev && {
+        ...prev,
+        widgets: prev.widgets.map(w =>
+          NON_DATA_WIDGETS.has(w.widgetType) ? w : { ...w, data: undefined as unknown as typeof w.data }
+        ),
+      })
+    }
     try {
       const targetIds = opts?.drillTargetIds ?? []
       const drillStack = opts?.drillStack ?? []
@@ -613,6 +623,8 @@ export default function ReportViewerPage() {
   // values (a missing one takes its report default, as the job does) and the named widget shows rows.
   const buttonBlockedReason = (w: RenderReportResponse['widgets'][number]): string | undefined => {
     if (w.widgetType !== 'BUTTON' || !w.chartConfig) return undefined
+    // While the report is being rendered the values a job would take are not on the page yet
+    if (rendering) return t('common.loading')
     let cfg: ButtonConfig
     try { cfg = JSON.parse(w.chartConfig) } catch { return undefined }
     const missing = (cfg.requiredParams || [])
@@ -704,6 +716,7 @@ export default function ReportViewerPage() {
             reportParams={currentParams}
             onJobFinished={() => { handleRender() }}
             buttonBlockedReason={buttonBlockedReason(w)}
+            loading={rendering}
           />
         </ErrorBoundary>
       </div>

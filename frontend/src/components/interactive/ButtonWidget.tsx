@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ButtonConfig, JobStatusResponse, controlsApi } from '@/api/controls'
+import { ButtonConfig, controlsApi } from '@/api/controls'
+import { JobProgress, jobRunKey, useJobRunStore } from '@/store/useJobRunStore'
 import { exportApi } from '@/api/export'
 import {
   ArrowRight, Eye, Filter, Download, ExternalLink, MousePointerClick, Play, Loader2
@@ -27,13 +28,6 @@ const sizeClasses: Record<string, string> = {
 // RUN_JOB progress: the run state is asked every POLL_MS; polling stops after MAX_POLL_ERRORS failures in a row.
 const POLL_MS = 5000
 const MAX_POLL_ERRORS = 5
-
-interface JobProgress {
-  runId: string
-  startedAt: number
-  status?: JobStatusResponse
-  pollErrors: number
-}
 
 interface ButtonWidgetProps {
   config: ButtonConfig
@@ -69,13 +63,27 @@ export default function ButtonWidget({
   const navigate = useNavigate()
   const [toggled, setToggled] = useState(false)
   const [starting, setStarting] = useState(false)
-  const [job, setJob] = useState<JobProgress | null>(null)
+  // The run lives in the store, so a tab change (the widget is unmounted and mounted again) keeps it
+  const jobKey = jobRunKey(reportId, widgetId)
+  const job = useJobRunStore(s => s.jobs[jobKey] ?? null)
+  const setJob = useCallback(
+    (update: JobProgress | null | ((j: JobProgress | null) => JobProgress | null)) =>
+      useJobRunStore.getState().setJob(jobKey, update),
+    [jobKey])
   const [now, setNow] = useState(() => Date.now())
-  const finishedRunRef = useRef<string | null>(null)
   const onJobFinishedRef = useRef(onJobFinished)
   onJobFinishedRef.current = onJobFinished
 
   const jobActive = !!job && !job.status?.finished && job.pollErrors < MAX_POLL_ERRORS
+
+  // Applying other parameter values (a new object of applied values) starts over: the line of a finished or
+  // lost run is taken away, as when the report was opened; a running job keeps its line.
+  const paramsRef = useRef(reportParams)
+  useEffect(() => {
+    if (paramsRef.current === reportParams) return
+    paramsRef.current = reportParams
+    setJob(j => (j && (j.status?.finished || j.pollErrors >= MAX_POLL_ERRORS) ? null : j))
+  }, [reportParams, setJob])
 
   // Poll the run state while the job is active.
   useEffect(() => {
@@ -86,9 +94,10 @@ export default function ButtonWidget({
       controlsApi.getJobStatus(reportId, widgetId, runId)
         .then(status => {
           if (cancelled) return
-          setJob(j => (j && j.runId === runId ? { ...j, status, pollErrors: 0 } : j))
-          if (status.finished && finishedRunRef.current !== runId) {
-            finishedRunRef.current = runId
+          const known = useJobRunStore.getState().jobs[jobKey]
+          const announce = status.finished && !!known && known.runId === runId && !known.notified
+          setJob(j => (j && j.runId === runId ? { ...j, status, pollErrors: 0, notified: j.notified || status.finished } : j))
+          if (announce) {
             if (status.succeeded) toast.success(t('interactive.button.job_done_toast'), { duration: 8000 })
             else toast.error(t('interactive.button.job_failed_toast', { task: status.failedTask || '-' }), { duration: 10000 })
             onJobFinishedRef.current?.()

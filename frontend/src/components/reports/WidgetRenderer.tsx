@@ -15,6 +15,8 @@ import { formatLocale } from '@/utils/formatLocale'
 
 interface Props {
   widget: RenderedWidget
+  // The report is being rendered: a widget without data says so instead of "no data"
+  loading?: boolean
   layers?: ChartLayerItem[]
   layerData?: Record<number, WidgetData>
   onChartClick?: (data: Record<string, unknown>) => void
@@ -71,7 +73,7 @@ function interpolateTitle(title: string | undefined, data: WidgetData | undefine
 }
 
 export default function WidgetRenderer({
-  widget, layers = [], layerData = {},
+  widget, loading = false, layers = [], layerData = {},
   onChartClick, highlightField, highlightValue,
   onDrillDown,
   reportId, onToggleWidgets, onApplyFilter,
@@ -157,7 +159,11 @@ export default function WidgetRenderer({
       const config = parseJson<Record<string, any>>(widget.chartConfig, {})
       return <ImageWidget src={config.src || config.url || ''} alt={resolvedTitle} linkUrl={config.linkUrl} fit={config.fit} borderRadius={config.borderRadius} />
     }
-    return <div className="h-full flex items-center justify-center text-slate-400 text-sm">{t('common.no_data')}</div>
+    return (
+      <div className="h-full flex items-center justify-center text-slate-400 text-sm">
+        {loading ? t('common.loading') : t('common.no_data')}
+      </div>
+    )
   }
 
   switch (widget.widgetType) {
